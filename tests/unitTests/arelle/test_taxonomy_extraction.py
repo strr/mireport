@@ -66,6 +66,7 @@ class StubConcept:
         isDimensionItem: bool = False,
         isNillable: bool = False,
         isNumeric: bool = False,
+        balance: str | None = None,
     ) -> None:
         self.qname = qname
         self.isEnumeration2Item = isEnumeration2Item
@@ -77,6 +78,7 @@ class StubConcept:
         self.isDimensionItem = isDimensionItem
         self.isNillable = isNillable
         self.isNumeric = isNumeric
+        self.balance = balance
 
 
 class StubLabelResource:
@@ -116,6 +118,11 @@ class StubValidatedModel:
         self, source: Any, arcrole: str
     ) -> list[ResourceRelationship]:
         return self._relsByArcrole[arcrole]
+
+    def balanceOf(self, concept: Any) -> str | None:
+        # The real narrowing is ValidatedModel's concern, tested in
+        # test_model_access.py; here it only needs to pass the value through.
+        return concept.balance
 
     def typeQNamesOfTypedDomainElement(self, concept: Any) -> tuple[QName, QName]:
         return self._typeQNamesByQName[concept.qname]
@@ -500,6 +507,57 @@ class TestExtractTypedDomainWrapperElement:
 
         assert extractor.taxonomyJson["xs_elements"][elementQName] is firstWrapper
         assert firstWrapper["nillable"] is True
+
+
+class TestAddConceptMetadata:
+    def test_true_flags_are_written(self) -> None:
+        extractor, _ = makeExtractor({})
+        concept = StubConcept(
+            qn(),
+            isAbstract=True,
+            isDimensionItem=True,
+            isHypercubeItem=True,
+            isNillable=True,
+            isNumeric=True,
+        )
+        jconcept: dict[str, Any] = {}
+
+        extractor.addConceptMetadata(cast(ModelConcept, concept), jconcept)
+
+        assert jconcept == {
+            "abstract": True,
+            "dimension": True,
+            "hypercube": True,
+            "nillable": True,
+            "numeric": True,
+        }
+
+    def test_nothing_written_for_a_plain_concept(self) -> None:
+        extractor, _ = makeExtractor({})
+        jconcept: dict[str, Any] = {}
+
+        extractor.addConceptMetadata(cast(ModelConcept, StubConcept(qn())), jconcept)
+
+        assert jconcept == {}
+
+    @pytest.mark.parametrize("balance", ["debit", "credit"])
+    def test_balance_is_written_when_declared(self, balance: str) -> None:
+        extractor, _ = makeExtractor({})
+        concept = StubConcept(qn("Revenue"), isNumeric=True, balance=balance)
+        jconcept: dict[str, Any] = {}
+
+        extractor.addConceptMetadata(cast(ModelConcept, concept), jconcept)
+
+        assert jconcept == {"numeric": True, "balance": balance}
+
+    def test_balance_is_omitted_when_undeclared(self) -> None:
+        extractor, _ = makeExtractor({})
+        concept = StubConcept(qn("Headcount"), isNumeric=True)
+        jconcept: dict[str, Any] = {}
+
+        extractor.addConceptMetadata(cast(ModelConcept, concept), jconcept)
+
+        assert "balance" not in jconcept
 
 
 def conceptRel(

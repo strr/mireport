@@ -44,8 +44,10 @@ class StubConcept:
         baseXbrliTypeQname: QName | None = None,
         baseXsdType: str = "anyType",
         typedDomainElement: Any = None,
+        balance: str | None = None,
     ) -> None:
         self.qname = qname
+        self.balance = balance
         self.isItem = isItem
         self.type = type
         self.typeQname = typeQname
@@ -379,6 +381,25 @@ class TestValidatedModel:
         model = makeModel(StubModelXbrl(qnameConcepts={q: StubConcept(None)}))
         with pytest.raises(ArelleModelInconsistency):
             list(model.itemConcepts())
+
+    @pytest.mark.parametrize("balance", ["debit", "credit"])
+    def test_balance_of_returns_declared_balance(self, balance: str) -> None:
+        concept = StubConcept(qn(), balance=balance)
+        model = makeModel(StubModelXbrl())
+        assert model.balanceOf(cast(ModelConcept, concept)) == balance
+
+    def test_balance_of_is_none_when_undeclared(self) -> None:
+        model = makeModel(StubModelXbrl())
+        assert model.balanceOf(cast(ModelConcept, StubConcept(qn()))) is None
+
+    # Case matters: xbrli:balance is an xs:token enumeration, so "Debit" is
+    # just as invalid as "sideways".
+    @pytest.mark.parametrize("balance", ["", "Debit", "sideways"])
+    def test_balance_of_raises_on_other_values(self, balance: str) -> None:
+        concept = StubConcept(qn(), balance=balance)
+        model = makeModel(StubModelXbrl())
+        with pytest.raises(ArelleModelInconsistency):
+            model.balanceOf(cast(ModelConcept, concept))
 
     def test_type_qnames_of(self) -> None:
         typeQName = qn("myType")

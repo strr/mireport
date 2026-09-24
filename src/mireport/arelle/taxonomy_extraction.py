@@ -552,6 +552,11 @@ class TaxonomyInfoExtractor:
             self.diagnostics.emit(ArelleDiagnostic.info("No dimension defaults found"))
 
     def addConceptMetadata(self, concept: ModelConcept, jconcept: dict) -> None:
+        """Add the concept's boolean flags (each written only when true) and
+        its xbrli:balance (written only when declared -- see
+        ValidatedModel.balanceOf())."""
+        if (balance := self.model.balanceOf(concept)) is not None:
+            jconcept["balance"] = balance
         meta = {
             "abstract": concept.isAbstract,
             "dimension": concept.isDimensionItem,

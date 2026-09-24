@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import NamedTuple, Self
+from typing import Literal, NamedTuple, Self, TypeGuard, get_args
 
 from arelle import XbrlConst
 from arelle.ModelDtsObject import (
@@ -47,6 +47,15 @@ _NO_NAMESPACE_HINT = (
 # canonicalisation assigns one per namespace, same as any other QName
 # without a source prefix.
 _QNAME_XSD_ANY_TYPE = QName(None, XbrlConst.xsd, "anyType")
+
+Balance = Literal["debit", "credit"]
+"""The two values XBRL 2.1 section 5.1.1.2 allows for xbrli:balance."""
+
+_BALANCE_VALUES: frozenset[str] = frozenset(get_args(Balance))
+
+
+def _isBalance(value: str) -> TypeGuard[Balance]:
+    return value in _BALANCE_VALUES
 
 
 def _requireNamespaced(qname: QName, context: Callable[[], str]) -> QName:
@@ -322,6 +331,29 @@ class ValidatedModel:
                 baseQName, lambda: f"of base type of {qnameOf(concept)}"
             ),
         )
+
+    def balanceOf(self, concept: ModelConcept) -> Balance | None:
+        """The concept's xbrli:balance, or None when it declares none.
+
+        XBRL 2.1 section 5.1.1.2 only permits the attribute on monetary items,
+        and most monetary items in practice omit it too, so None is the
+        common case rather than an error. Arelle hands back the attribute's
+        raw text (concept.balance is a plain str | None), so anything other
+        than the two schema-permitted values -- which Arelle's own schema
+        validation would also have reported -- is treated as a model
+        inconsistency here rather than carried into the extracted JSON.
+        """
+        if (balance := concept.balance) is None:
+            return None
+        if not _isBalance(balance):
+            raise ArelleModelInconsistency(
+                ArelleDiagnostic.error(
+                    "Concept has an xbrli:balance that is neither debit nor credit",
+                    concepts=(qnameOf(concept),),
+                    balance=balance,
+                )
+            )
+        return balance
 
     def typeQNamesOfTypedDomainElement(
         self, element: ModelConcept
