@@ -1209,6 +1209,54 @@ class Taxonomy:
             )
             warnings.warn(UserWarning(te))
 
+    @classmethod
+    def fromJSON(cls, source: Path | dict) -> Self:
+        """Build a taxonomy from JSON and return it, without registering it.
+
+        source may be a path to a file written by mireport.arelle.taxonomy_extraction, or
+        an already parsed dict, exactly as for loadTaxonomyJSON(). Unlike that,
+        getTaxonomy() does not find the result afterwards, and whether some
+        taxonomy with the same entry point is already registered is irrelevant:
+        each call builds a new, independent Taxonomy, so the same entry point
+        (or the same dict) can be built as many times as a caller likes. source
+        is only read, never modified.
+
+        Failures are raised, as for loadTaxonomyJSON().
+        """
+        bits = source if isinstance(source, dict) else getObject(source)
+        entryPoint = bits["entryPoint"]
+
+        qnameMaker = getBootstrapQNameMaker()
+        for prefix, namespace in bits["namespaces"].items():
+            qnameMaker.addNamespacePrefix(prefix, namespace)
+
+        concepts: dict[str, Concept] = {
+            str_qname: Concept(qnameMaker, str_qname, jconcept)
+            for str_qname, jconcept in bits["concepts"].items()
+        }
+        typedDomainWrapperElements: dict[str, TypedDomainWrapperElement] = {
+            str_qname: TypedDomainWrapperElement(qnameMaker, str_qname, jelement)
+            for str_qname, jelement in bits.get("xs_elements", {}).items()
+        }
+        if (references := bits.get("references")) is None:
+            # Predates the top-level "references" section (each concept carried
+            # its own "references" list instead): fold those into the same
+            # shape so old baked JSON still loads.
+            references = _foldLegacyConceptReferences(bits["concepts"])
+
+        return cls(
+            concepts,
+            entryPoint=entryPoint,
+            presentation=bits["presentation"],
+            dimensions=bits["dimensions"],
+            qnameMaker=qnameMaker,
+            utr=UTR.fromDict(
+                getObject(getResource(registries, "utr.json")), qnameMaker=qnameMaker
+            ),
+            typedDomainWrapperElements=typedDomainWrapperElements,
+            references=references,
+        )
+
     @staticmethod
     def _unsupportedCubeReason(
         cubeQname: str,
@@ -1605,6 +1653,8 @@ def loadTaxonomyJSON(source: Path | dict) -> Taxonomy:
 
     Unlike loadBuiltInTaxonomyJSON(), failures are raised rather than logged --
     there is only one taxonomy here, so there is no rest of the batch to save.
+
+    To build a taxonomy without registering it, use Taxonomy.fromJSON().
     """
     bits = source if isinstance(source, dict) else getObject(source)
     _createTaxonomyFromJSON(bits)
@@ -1617,36 +1667,7 @@ def _createTaxonomyFromJSON(bits: dict) -> None:
         raise TaxonomyException(
             f"Already loaded taxonomy. Taxonomies loaded: {' '.join(_TAXONOMIES.keys())}"
         )
-    qnameMaker = getBootstrapQNameMaker()
-    for prefix, namespace in bits["namespaces"].items():
-        qnameMaker.addNamespacePrefix(prefix, namespace)
-
-    concepts: dict[str, Concept] = {
-        str_qname: Concept(qnameMaker, str_qname, jconcept)
-        for str_qname, jconcept in bits["concepts"].items()
-    }
-    typedDomainWrapperElements: dict[str, TypedDomainWrapperElement] = {
-        str_qname: TypedDomainWrapperElement(qnameMaker, str_qname, jelement)
-        for str_qname, jelement in bits.get("xs_elements", {}).items()
-    }
-    if (references := bits.get("references")) is None:
-        # Predates the top-level "references" section (each concept carried
-        # its own "references" list instead): fold those into the same
-        # shape so old baked JSON still loads.
-        references = _foldLegacyConceptReferences(bits["concepts"])
-
-    _TAXONOMIES[entryPoint] = Taxonomy(
-        concepts,
-        entryPoint=entryPoint,
-        presentation=bits["presentation"],
-        dimensions=bits["dimensions"],
-        qnameMaker=qnameMaker,
-        utr=UTR.fromDict(
-            getObject(getResource(registries, "utr.json")), qnameMaker=qnameMaker
-        ),
-        typedDomainWrapperElements=typedDomainWrapperElements,
-        references=references,
-    )
+    _TAXONOMIES[entryPoint] = Taxonomy.fromJSON(bits)
 
 
 def _foldLegacyConceptReferences(
