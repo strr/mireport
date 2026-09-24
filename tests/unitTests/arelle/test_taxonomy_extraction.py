@@ -33,11 +33,13 @@ from mireport.arelle.model_access import (
 )
 from mireport.arelle.support import ArelleModelInconsistency
 from mireport.arelle.taxonomy_extraction import (
+    DefinitionRelationship,
     DefinitionRow,
     PresentationRow,
     TaxonomyInfoExtractor,
     writeDataFile,
 )
+from mireport.taxonomy import Concept, Taxonomy
 
 
 def qn(local: str = "Thing", ns: str = "https://example.com/vsme") -> QName:
@@ -1350,3 +1352,317 @@ class TestReportIsolatedConcepts:
             linkrolesByArcrole={XbrlConst.dimensionDomain: [self.ELR]},
         )
         assert diagnostics == []
+
+
+class StubLinkroleRelSet:
+    """A relationship set with a linkrole, whose consecutiveSet() follows an
+    arc's consecutive linkrole into another of these (xbrldt:targetRole),
+    like the real ConceptRelationshipSet."""
+
+    def __init__(
+        self,
+        linkrole: str,
+        relsFrom: dict[int, list[ConceptRelationship]],
+        *,
+        roots: list[StubConcept] | None = None,
+        others: dict[str, StubLinkroleRelSet] | None = None,
+    ) -> None:
+        self.linkrole = linkrole
+        self._relsFrom = relsFrom
+        self._roots = roots or []
+        self.others = others if others is not None else {}
+
+    def rootConcepts(self) -> list[StubConcept]:
+        return self._roots
+
+    def hasRelationshipsFrom(self, concept: Any) -> bool:
+        return bool(self._relsFrom.get(id(concept)))
+
+    def hasRelationshipsTo(self, concept: Any) -> bool:
+        return any(
+            rel.target is concept for rels in self._relsFrom.values() for rel in rels
+        )
+
+    def relationshipsFrom(self, concept: Any) -> list[ConceptRelationship]:
+        return self._relsFrom.get(id(concept), [])
+
+    def consecutiveSet(self, rel: ConceptRelationship) -> StubLinkroleRelSet:
+        if rel.consecutiveLinkrole == self.linkrole:
+            return self
+        return self.others[rel.consecutiveLinkrole]
+
+
+class TestWalkDefinitionRelationships:
+    ELR = "https://example.com/elr"
+    OTHER_ELR = "https://example.com/other-elr"
+
+    def walk(
+        self, root: StubConcept, relSet: StubLinkroleRelSet
+    ) -> list[DefinitionRelationship]:
+        extractor, token = makeExtractor({})
+        collectedDiagnostics(token)
+        return list(
+            extractor.walkDefinitionRelationships(
+                cast(ModelConcept, root), cast(ConceptRelationshipSet, relSet)
+            )
+        )
+
+    def test_multi_level_tree_keeps_parent_and_arc_order(self) -> None:
+        domain, europe, france, germany, asia = (
+            StubConcept(qn(n))
+            for n in ("Domain", "Europe", "France", "Germany", "Asia")
+        )
+        relSet = StubLinkroleRelSet(
+            self.ELR,
+            {
+                id(domain): [
+                    conceptRel(europe, order=0.5, isUsable=False),
+                    conceptRel(asia, order=3.0),
+                ],
+                id(europe): [
+                    conceptRel(france, order=1.0),
+                    conceptRel(germany, order=2.0),
+                ],
+            },
+        )
+        assert self.walk(domain, relSet) == [
+            DefinitionRelationship(self.ELR, qn("Domain"), qn("Europe"), 0.5, False),
+            DefinitionRelationship(self.ELR, qn("Europe"), qn("France"), 1.0, True),
+            DefinitionRelationship(self.ELR, qn("Europe"), qn("Germany"), 2.0, True),
+            DefinitionRelationship(self.ELR, qn("Domain"), qn("Asia"), 3.0, True),
+        ]
+
+    def test_member_with_two_parents_has_its_own_arcs_once(self) -> None:
+        domain, a, b, shared, leaf = (
+            StubConcept(qn(n)) for n in ("Domain", "A", "B", "Shared", "Leaf")
+        )
+        relSet = StubLinkroleRelSet(
+            self.ELR,
+            {
+                id(domain): [conceptRel(a), conceptRel(b, order=2.0)],
+                id(a): [conceptRel(shared)],
+                id(b): [conceptRel(shared)],
+                id(shared): [conceptRel(leaf)],
+            },
+        )
+        assert [(r.parent, r.member) for r in self.walk(domain, relSet)] == [
+            (qn("Domain"), qn("A")),
+            (qn("A"), qn("Shared")),
+            (qn("Shared"), qn("Leaf")),
+            (qn("Domain"), qn("B")),
+            (qn("B"), qn("Shared")),
+        ]
+
+    def test_directed_cycle_terminates(self) -> None:
+        a, b = StubConcept(qn("A")), StubConcept(qn("B"))
+        relSet = StubLinkroleRelSet(
+            self.ELR, {id(a): [conceptRel(b)], id(b): [conceptRel(a)]}
+        )
+        assert [(r.parent, r.member) for r in self.walk(a, relSet)] == [
+            (qn("A"), qn("B")),
+            (qn("B"), qn("A")),
+        ]
+
+    def test_target_role_arcs_carry_their_own_elr(self) -> None:
+        domain, europe, france = (
+            StubConcept(qn(n)) for n in ("Domain", "Europe", "France")
+        )
+        other = StubLinkroleRelSet(
+            self.OTHER_ELR,
+            {id(europe): [conceptRel(france, consecutiveLinkrole=self.OTHER_ELR)]},
+        )
+        relSet = StubLinkroleRelSet(
+            self.ELR,
+            {id(domain): [conceptRel(europe, consecutiveLinkrole=self.OTHER_ELR)]},
+            others={self.OTHER_ELR: other},
+        )
+        assert [(r.elr, r.member) for r in self.walk(domain, relSet)] == [
+            (self.ELR, qn("Europe")),
+            (self.OTHER_ELR, qn("France")),
+        ]
+
+
+class TestExtractDimensionDefinitionsDomainTrees:
+    """extractDimensionDefinitions() writes each explicit dimension's declared
+    domain tree(s) under "explicitDimensionDomains", alongside -- and without
+    changing -- the flat usable "explicitDimensions" list."""
+
+    ELR = "https://example.com/elr"
+    DOMAIN_ELR = "https://example.com/domain-elr"
+
+    def extract(
+        self, domainMembers: dict[str, list[ConceptRelationship]] | None = None
+    ) -> tuple[TaxonomyInfoExtractor, dict[str, Any]]:
+        root = StubConcept(qn("Root"))
+        table = StubConcept(qn("Table"), isHypercubeItem=True)
+        axis = StubConcept(qn("RegionAxis"), isExplicitDimension=True)
+        c = self.concepts
+
+        def dm(target: StubConcept, **kwargs: Any) -> ConceptRelationship:
+            # An arc's consecutive linkrole is its own ELR (no targetRole).
+            return conceptRel(target, consecutiveLinkrole=self.DOMAIN_ELR, **kwargs)
+
+        # Domain
+        #   Europe (0.5, not usable)
+        #     France (1)
+        #     Germany (2)
+        #   Asia (3)
+        domainMemberRelSet = StubLinkroleRelSet(
+            self.DOMAIN_ELR,
+            {
+                id(c["Domain"]): [
+                    dm(c["Europe"], order=0.5, isUsable=False),
+                    dm(c["Asia"], order=3.0),
+                ],
+                id(c["Europe"]): [
+                    dm(c["France"], order=1.0),
+                    dm(c["Germany"], order=2.0),
+                ],
+            },
+        )
+        extractor, token = makeExtractor(
+            {},
+            {
+                ((XbrlConst.all, XbrlConst.notAll), self.ELR): (
+                    StubHypercubeDimensionRelSet(
+                        roots=[root],
+                        relsFrom={
+                            id(root): [
+                                replace(conceptRel(table), contextElement="scenario")
+                            ]
+                        },
+                    )
+                ),
+                (XbrlConst.domainMember, self.ELR): StubDomainMemberRelSet({}),
+                (XbrlConst.hypercubeDimension, self.ELR): StubHypercubeDimensionRelSet(
+                    roots=[table],
+                    relsFrom={
+                        id(table): [
+                            conceptRel(axis, arcrole=XbrlConst.hypercubeDimension)
+                        ]
+                    },
+                ),
+                (XbrlConst.dimensionDomain, self.ELR): StubLinkroleRelSet(
+                    self.ELR,
+                    {
+                        id(axis): [
+                            conceptRel(
+                                c["Domain"],
+                                arcrole=XbrlConst.dimensionDomain,
+                                consecutiveLinkrole=self.DOMAIN_ELR,
+                            )
+                        ]
+                    },
+                    roots=[axis],
+                ),
+                (XbrlConst.domainMember, self.DOMAIN_ELR): domainMemberRelSet,
+            },
+            linkrolesByArcrole={XbrlConst.all: [self.ELR]},
+        )
+        extractor.extractDimensionDefinitions()
+        collectedDiagnostics(token)
+        cube = extractor.taxonomyJson["dimensions"][self.ELR][qn("Table")]
+        return extractor, cube
+
+    def setup_method(self) -> None:
+        self.concepts = {
+            n: StubConcept(qn(n))
+            for n in ("Domain", "Europe", "France", "Germany", "Asia")
+        }
+
+    def test_flat_usable_list_is_unchanged(self) -> None:
+        _, cube = self.extract()
+        assert cube["explicitDimensions"] == {
+            qn("RegionAxis"): [qn("Domain"), qn("France"), qn("Germany"), qn("Asia")]
+        }
+
+    def test_cube_gains_only_the_domain_trees_key(self) -> None:
+        _, cube = self.extract()
+        assert set(cube.keys()) == {
+            "primaryItems",
+            "type",
+            "xbrldt:contextElement",
+            "xbrldt:closed",
+            "explicitDimensions",
+            "explicitDimensionDomains",
+        }
+
+    def test_tree_keeps_nesting_and_arc_order(self) -> None:
+        _, cube = self.extract()
+
+        def arc(parent: str, member: str, order: float, usable: bool = True) -> Any:
+            return {
+                "elr": self.DOMAIN_ELR,
+                "parent": qn(parent),
+                "member": qn(member),
+                "order": order,
+                "usable": usable,
+            }
+
+        assert cube["explicitDimensionDomains"] == {
+            qn("RegionAxis"): [
+                {
+                    "elr": self.ELR,
+                    "domain": qn("Domain"),
+                    "order": 1.0,
+                    "usable": True,
+                    "members": [
+                        arc("Domain", "Europe", 0.5, False),
+                        arc("Europe", "France", 1.0),
+                        arc("Europe", "Germany", 2.0),
+                        arc("Domain", "Asia", 3.0),
+                    ],
+                }
+            ]
+        }
+
+    def test_trees_survive_into_json_and_load_back(self, tmp_path: Path) -> None:
+        # The writer/reader contract: what the extractor bakes is exactly
+        # what Taxonomy.fromJSON() reads back into DimensionDomainTree.
+        extractor, _ = self.extract()
+        dimensions = extractor.qnameConverter.convertRecursive(
+            extractor.taxonomyJson["dimensions"]
+        )
+        names = ("Root", "Table", "RegionAxis", *self.concepts)
+        conceptKeys = extractor.qnameConverter.convertRecursive([qn(n) for n in names])
+        flags: dict[str, dict[str, bool]] = {
+            "Table": {"abstract": True, "hypercube": True},
+            "RegionAxis": {"abstract": True, "dimension": True},
+        }
+        bits = {
+            "entryPoint": "test://extracted-domain-trees",
+            "namespaces": extractor.qnameConverter.getNamespacePrefixMap(),
+            "presentation": {},
+            "dimensions": dimensions,
+            "concepts": {
+                key: {
+                    "labels": {},
+                    "dataType": "xbrli:stringItemType",
+                    "baseDataType": "xbrli:stringItemType",
+                    "periodType": "duration",
+                    **flags.get(name, {}),
+                }
+                for name, key in zip(names, conceptKeys, strict=True)
+            },
+        }
+        path = tmp_path / "taxonomy.json"
+        writeDataFile(cast(Cntlr, StubCntlr()), path, "taxonomy", bits)
+        taxonomy = Taxonomy.fromJSON(json.loads(path.read_text()))
+
+        byName = dict(zip(names, conceptKeys, strict=True))
+
+        def c(name: str) -> Concept:
+            return taxonomy.getConcept(byName[name])
+
+        axis = c("RegionAxis")
+        assert taxonomy.getDomainHeadsForExplicitDimension(axis) == {c("Domain")}
+        [tree] = taxonomy.getDomainTreesForExplicitDimension(axis)
+        assert [
+            (r.parent, r.member, r.order, r.usable) for r in tree.relationships
+        ] == [
+            (c("Domain"), c("Europe"), 0.5, False),
+            (c("Europe"), c("France"), 1.0, True),
+            (c("Europe"), c("Germany"), 2.0, True),
+            (c("Domain"), c("Asia"), 3.0, True),
+        ]
+        assert tree.members == taxonomy.getDomainMembersForExplicitDimension(axis)

@@ -109,6 +109,19 @@ class DefinitionRow(NamedTuple):
     isUsable: bool
 
 
+class DefinitionRelationship(NamedTuple):
+    """One arc in a depth-first walk of a definition (domain-member) tree,
+    kept as an edge -- parent, arc order and the ELR the arc is declared in
+    -- rather than as a DefinitionRow's indent, so the tree's exact shape
+    survives."""
+
+    elr: str
+    parent: QName
+    member: QName
+    order: float
+    isUsable: bool
+
+
 class PresentationRow(NamedTuple):
     """One concept in a depth-first walk of a presentation tree."""
 
@@ -233,6 +246,34 @@ class TaxonomyInfoExtractor:
             yield DefinitionRow(indent, rel.targetQName, rel.isUsable)
             yield from self.walkDefinitionChildren(
                 rel.target, relSet.consecutiveSet(rel), indent + 1
+            )
+
+    def walkDefinitionRelationships(
+        self,
+        parent_concept: ModelConcept,
+        relSet: ConceptRelationshipSet,
+        _seen: set[tuple[str, QName, QName]] | None = None,
+    ) -> Iterator[DefinitionRelationship]:
+        """Yield the arcs beneath `parent_concept` depth-first, siblings in arc
+        order, following each arc's consecutive linkrole (xbrldt:targetRole).
+
+        Unlike walkDefinitionChildren(), each arc is yielded once: a member
+        reached through several parents yields one arc per parent, but the
+        arcs beneath it only the first time. That also stops a (XDT-invalid)
+        directed cycle from recursing forever."""
+        seen = set() if _seen is None else _seen
+        parentQName = qnameOf(parent_concept)
+        elr = relSet.linkrole
+        for rel in relSet.relationshipsFrom(parent_concept):
+            key = (elr, parentQName, rel.targetQName)
+            if key in seen:
+                continue
+            seen.add(key)
+            yield DefinitionRelationship(
+                elr, parentQName, rel.targetQName, rel.order, rel.isUsable
+            )
+            yield from self.walkDefinitionRelationships(
+                rel.target, relSet.consecutiveSet(rel), seen
             )
 
     def walkPresentationChildren(
@@ -383,6 +424,46 @@ class TaxonomyInfoExtractor:
                 if row.isUsable
             )
         return unique_list(members)
+
+    def getDomainTreesForExplicitDimension(
+        self,
+        explicitDimension: ModelConcept,
+        elrUri: str,
+    ) -> list[dict[str, Any]]:
+        """The declared shape of the domain(s) getDomainMembersForExplicitDimension()
+        flattens: one entry per dimension-domain arc from `explicitDimension` in
+        `elrUri`, in arc order, holding the domain head and every domain-member
+        arc beneath it (see walkDefinitionRelationships()).
+
+        Call getDomainMembersForExplicitDimension() first: this relies on its
+        checks, and adds no diagnostics of its own."""
+        dimensionDomainRelSet = self.model.conceptRelationshipSet(
+            XbrlConst.dimensionDomain, elrUri
+        )
+        return [
+            {
+                "elr": elrUri,
+                "domain": rel.targetQName,
+                "order": rel.order,
+                "usable": rel.isUsable,
+                "members": [
+                    {
+                        "elr": arc.elr,
+                        "parent": arc.parent,
+                        "member": arc.member,
+                        "order": arc.order,
+                        "usable": arc.isUsable,
+                    }
+                    for arc in self.walkDefinitionRelationships(
+                        rel.target,
+                        self.model.conceptRelationshipSet(
+                            XbrlConst.domainMember, rel.consecutiveLinkrole
+                        ),
+                    )
+                ],
+            }
+            for rel in dimensionDomainRelSet.relationshipsFrom(explicitDimension)
+        ]
 
     def verifyDomainMemberTree(
         self,
@@ -971,6 +1052,11 @@ class TaxonomyInfoExtractor:
                             cube.setdefault("explicitDimensions", {})[
                                 dimensionRel.targetQName
                             ] = self.getDomainMembersForExplicitDimension(
+                                dimension, dimensionRel.consecutiveLinkrole
+                            )
+                            cube.setdefault("explicitDimensionDomains", {})[
+                                dimensionRel.targetQName
+                            ] = self.getDomainTreesForExplicitDimension(
                                 dimension, dimensionRel.consecutiveLinkrole
                             )
                         elif dimension.isTypedDimension:
