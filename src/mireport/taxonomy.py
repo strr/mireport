@@ -853,6 +853,62 @@ class PresentationGroup(NamedTuple):
                 return PresentationStyle.Empty
 
 
+@dataclass(frozen=True, slots=True)
+class DomainMemberRelationship:
+    """One domain-member arc within a DimensionDomainTree: member is a child of
+    parent, at this arc order, in the ELR the arc is declared in (which differs
+    from the tree's own ELR only where an xbrldt:targetRole was followed).
+
+    usable is the arc's xbrldt:usable, so it applies to member, not parent."""
+
+    roleUri: str
+    parent: Concept
+    member: Concept
+    order: float
+    usable: bool
+
+
+@dataclass(frozen=True, slots=True)
+class DimensionDomainTree:
+    """One dimension-domain arc of an explicit dimension and the domain-member
+    tree beneath its target, exactly as declared: domainHead is the arc's
+    target (the root of the domain), and relationships are every domain-member
+    arc reachable from it, depth-first with siblings in arc order -- so each
+    parent's arc comes before its own children's.
+
+    Unlike ExplicitDimensionSignature.domain (the flat set of usable members,
+    which is all dimensional validity needs), this keeps the shape: nesting,
+    arc order and unusable members. A member with several parents in the same
+    tree has one relationship per parent; its own children appear once.
+    """
+
+    dimension: Concept
+    roleUri: str
+    """The ELR of the dimension-domain arc."""
+    domainHead: Concept
+    order: float
+    """The dimension-domain arc's order, among the dimension's other
+    dimension-domain arcs in the same ELR (almost always there is just one)."""
+    usable: bool
+    """The dimension-domain arc's xbrldt:usable, i.e. whether domainHead is
+    itself a valid value for the dimension."""
+    relationships: tuple[DomainMemberRelationship, ...]
+
+    def getChildren(self, parent: Concept) -> tuple[DomainMemberRelationship, ...]:
+        """parent's own domain-member relationships in this tree, in arc
+        order. Pass domainHead for the top level; a leaf gives ()."""
+        return tuple(rel for rel in self.relationships if rel.parent == parent)
+
+    @property
+    def members(self) -> frozenset[Concept]:
+        """The usable members of this tree, domainHead included if usable --
+        this tree's contribution to ExplicitDimensionSignature.domain."""
+        usable = {rel.member for rel in self.relationships if rel.usable}
+        if self.usable:
+            usable.add(self.domainHead)
+        return frozenset(usable)
+
+
 @dataclass(frozen=True)
 class ExplicitDimensionSignature:
     """One explicit dimension and the domain members valid for it within a single
@@ -860,6 +916,11 @@ class ExplicitDimensionSignature:
 
     dimension: Concept
     domain: frozenset[Concept]
+    domainTrees: tuple[DimensionDomainTree, ...] = field(default=(), compare=False)
+    """The declared tree(s) domain was flattened from, one per dimension-domain
+    arc, in arc order. Empty for JSON baked before these were extracted.
+    Excluded from equality, so a signature still compares by what it makes
+    valid, not by how that was declared."""
 
 
 @dataclass(frozen=True)
@@ -1082,6 +1143,9 @@ class Taxonomy:
         ] = defaultdict(list)
         unsupportedRoles: dict[str, str] = {}
         domainByDimension: dict[Concept, list[Concept]] = defaultdict(list)
+        domainTreesByDimensionAcrossRoles: dict[Concept, list[DimensionDomainTree]] = (
+            defaultdict(list)
+        )
         self._unsupportedRolesByConcept: dict[Concept, dict[str, str]] = defaultdict(
             dict
         )
@@ -1140,8 +1204,23 @@ class Taxonomy:
                         "explicitDimensions", {}
                     ).items()
                 }
+                # Older baked JSON predates "explicitDimensionDomains"; its
+                # absence just means no trees, only the flat domains above.
+                domainTreesByDimension = {
+                    concepts[dimQname]: tuple(
+                        self._domainTreeFromJSON(concepts, concepts[dimQname], jtree)
+                        for jtree in jtrees
+                    )
+                    for dimQname, jtrees in cubeDetails.get(
+                        "explicitDimensionDomains", {}
+                    ).items()
+                }
                 explicitDimensions = frozenset(
-                    ExplicitDimensionSignature(dimension=dimension, domain=domain)
+                    ExplicitDimensionSignature(
+                        dimension=dimension,
+                        domain=domain,
+                        domainTrees=domainTreesByDimension.get(dimension, ()),
+                    )
                     for dimension, domain in explicitDimensionsByName.items()
                 )
 
@@ -1183,6 +1262,8 @@ class Taxonomy:
 
                 for dimension, memberList in explicitDimensionsByName.items():
                     domainByDimension[dimension].extend(memberList)
+                for dimension, trees in domainTreesByDimension.items():
+                    domainTreesByDimensionAcrossRoles[dimension].extend(trees)
                 for r in primaryItemRels:
                     declarationsByPrimaryItem[r.concept].append(declaration)
 
@@ -1205,6 +1286,20 @@ class Taxonomy:
         self._lookupDomainByDimension: Mapping[Concept, frozenset[Concept]] = {
             dimension: frozenset(domainlist)
             for dimension, domainlist in domainByDimension.items()
+        }
+        # Two hypercubes of one base set sharing a dimension reach the very
+        # same dimension-domain arc, so equal trees are folded into one.
+        # Trees differing only in ELR are declared separately and kept apart.
+        self._lookupDomainTreesByDimension: Mapping[
+            Concept, tuple[DimensionDomainTree, ...]
+        ] = {
+            dimension: tuple(
+                sorted(
+                    dict.fromkeys(trees),
+                    key=lambda t: (t.roleUri, t.order, str(t.domainHead.qname)),
+                )
+            )
+            for dimension, trees in domainTreesByDimensionAcrossRoles.items()
         }
 
         if unsupportedRoles:
@@ -1269,6 +1364,30 @@ class Taxonomy:
             ),
             typedDomainWrapperElements=typedDomainWrapperElements,
             references=references,
+        )
+
+    @staticmethod
+    def _domainTreeFromJSON(
+        concepts: Mapping[str, Concept], dimension: Concept, jtree: Mapping[str, Any]
+    ) -> DimensionDomainTree:
+        """One entry of a cube's "explicitDimensionDomains"[dimension] list, as
+        written by TaxonomyInfoExtractor.getDomainTreesForExplicitDimension()."""
+        return DimensionDomainTree(
+            dimension=dimension,
+            roleUri=jtree["elr"],
+            domainHead=concepts[jtree["domain"]],
+            order=float(jtree["order"]),
+            usable=bool(jtree["usable"]),
+            relationships=tuple(
+                DomainMemberRelationship(
+                    roleUri=jrel["elr"],
+                    parent=concepts[jrel["parent"]],
+                    member=concepts[jrel["member"]],
+                    order=float(jrel["order"]),
+                    usable=bool(jrel["usable"]),
+                )
+                for jrel in jtree["members"]
+            ),
         )
 
     @staticmethod
@@ -1565,6 +1684,32 @@ class Taxonomy:
     ) -> frozenset[Concept]:
         """This aggregates across all base-sets to give all the domain members specified for the given dimension."""
         return self._lookupDomainByDimension.get(dimension, frozenset())
+
+    def getDomainTreesForExplicitDimension(
+        self, dimension: Concept
+    ) -> tuple[DimensionDomainTree, ...]:
+        """Every distinct declared domain tree for the given dimension, across
+        the same base-sets getDomainMembersForExplicitDimension() aggregates,
+        ordered by ELR then arc order. These are the trees as declared, not
+        merged: the same domain declared in two ELRs gives two trees, which
+        differ only in their roleUri(s). For the tree(s) behind one hypercube's
+        signature, see ExplicitDimensionSignature.domainTrees instead.
+
+        Empty if the dimension has no declared domain, or the taxonomy JSON
+        predates domain trees being extracted."""
+        return self._lookupDomainTreesByDimension.get(dimension, ())
+
+    def getDomainHeadsForExplicitDimension(
+        self, dimension: Concept
+    ) -> frozenset[Concept]:
+        """This aggregates across all base-sets to give the domain head (the
+        dimension-domain arc's target) of every domain declared for the given
+        dimension. Almost always a single concept. See
+        getDomainTreesForExplicitDimension() for the trees beneath them."""
+        return frozenset(
+            tree.domainHead
+            for tree in self.getDomainTreesForExplicitDimension(dimension)
+        )
 
     def getDimensionDefault(self, dimension: Concept) -> Concept | None:
         return self._dimensionDefaults.get(dimension)
