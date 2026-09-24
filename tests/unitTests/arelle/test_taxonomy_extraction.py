@@ -566,17 +566,20 @@ def conceptRel(
     isUsable: bool = True,
     preferredLabel: str | None = None,
     arcrole: str = XbrlConst.all,
+    order: float = 1.0,
+    consecutiveLinkrole: str = "https://example.com/elr",
 ) -> ConceptRelationship:
     assert target.qname is not None
     return ConceptRelationship(
         target=cast(Any, target),
         targetQName=target.qname,
         arcrole=arcrole,
-        consecutiveLinkrole="https://example.com/elr",
+        consecutiveLinkrole=consecutiveLinkrole,
         isUsable=isUsable,
         preferredLabel=preferredLabel,
         contextElement=None,
         isClosed=False,
+        order=order,
     )
 
 

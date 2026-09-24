@@ -184,6 +184,14 @@ class TestConceptRelationship:
         )
         assert rel.arcrole == XbrlConst.notAll
 
+    def test_carries_order_through(self) -> None:
+        target = MagicMock(spec=ModelConcept)
+        target.qname = qn()
+        rel = ConceptRelationship.fromArelle(
+            cast(Any, StubRel(toModelObject=target, order=2.5))
+        )
+        assert rel.order == 2.5
+
 
 class TestConceptRelationshipSet:
     ARCROLE = XbrlConst.domainMember
@@ -251,6 +259,7 @@ class TestConceptRelationshipSet:
             preferredLabel=None,
             contextElement=None,
             isClosed=False,
+            order=1.0,
         )
         assert crs.consecutiveSet(rel) is crs
 
@@ -275,6 +284,7 @@ class TestConceptRelationshipSet:
             preferredLabel=None,
             contextElement=None,
             isClosed=False,
+            order=1.0,
         )
         consecutive = crs.consecutiveSet(rel)
         assert consecutive is not crs

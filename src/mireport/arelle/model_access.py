@@ -112,6 +112,7 @@ class ConceptRelationship:
     preferredLabel: str | None
     contextElement: str | None
     isClosed: bool
+    order: float
 
     @classmethod
     def fromArelle(cls, rel: ModelRelationship) -> Self:
@@ -144,6 +145,7 @@ class ConceptRelationship:
             preferredLabel=rel.preferredLabel,
             contextElement=rel.contextElement,
             isClosed=rel.isClosed,
+            order=rel.order,
         )
 
 
