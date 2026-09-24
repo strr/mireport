@@ -854,6 +854,45 @@ class PresentationGroup(NamedTuple):
 
 
 @dataclass(frozen=True, slots=True)
+class CalculationRelationship:
+    """One XBRL 2.1 summation-item arc: target contributes to source's total,
+    multiplied by weight (XBRL 2.1 section 5.2.5.2). Named for the arc's own
+    direction, so source is the total and target the contributing item."""
+
+    roleUri: str
+    source: Concept
+    target: Concept
+    weight: float
+    """Nonzero; almost always 1.0 or -1.0, but any other value is allowed."""
+    order: float
+
+
+@dataclass(frozen=True, slots=True)
+class CalculationGroup:
+    """One ELR's calculation network: its summation-item arcs exactly as
+    declared, one relationship per arc, each source's arcs together and in
+    arc order.
+
+    Deliberately not a tree: a network may have several totals, a concept
+    may be both a total and a contributing item (in this ELR or another),
+    and summation-item allows cycles. getItems() follows it one level at a
+    time instead."""
+
+    roleUri: str
+    relationships: tuple[CalculationRelationship, ...]
+
+    def getItems(self, total: Concept) -> tuple[CalculationRelationship, ...]:
+        """total's own summation-item relationships in this ELR, in arc
+        order. () if it is not a total here."""
+        return tuple(rel for rel in self.relationships if rel.source == total)
+
+    @property
+    def totals(self) -> frozenset[Concept]:
+        """Every concept that is a total (an arc source) in this ELR."""
+        return frozenset(rel.source for rel in self.relationships)
+
+
+@dataclass(frozen=True, slots=True)
 class DomainMemberRelationship:
     """One domain-member arc within a DimensionDomainTree: member is a child of
     parent, at this arc order, in the ELR the arc is declared in (which differs
@@ -1054,9 +1093,11 @@ class Taxonomy:
         utr: UTR,
         typedDomainWrapperElements: dict[str, TypedDomainWrapperElement] | None = None,
         references: Iterable[Mapping] | None = None,
+        calculation: Mapping[str, Mapping[str, Any]] | None = None,
     ) -> None:
-        # presentation and dimensions are only ever read, never modified, so
-        # the same parsed JSON can back any number of Taxonomy objects.
+        # presentation, dimensions and calculation are only ever read, never
+        # modified, so the same parsed JSON can back any number of Taxonomy
+        # objects.
         self._entryPoint = entryPoint
         self._dimensions = dimensions
         self._qnameMaker = qnameMaker
@@ -1098,6 +1139,10 @@ class Taxonomy:
         self._groups: tuple[PresentationGroup, ...] = tuple(
             PresentationGroup.fromJSON(self, roleUri, bits)
             for roleUri, bits in presentation.items()
+        )
+        self._calculation: tuple[CalculationGroup, ...] = tuple(
+            self._calculationGroupFromJSON(roleUri, bits)
+            for roleUri, bits in (calculation or {}).items()
         )
 
         self._lookupConceptsByName: dict[str, list[Concept]] = defaultdict(list)
@@ -1364,6 +1409,28 @@ class Taxonomy:
             ),
             typedDomainWrapperElements=typedDomainWrapperElements,
             references=references,
+            # Absent both when the DTS has no calculation linkbase and in JSON
+            # baked before calculations were extracted.
+            calculation=bits.get("calculation"),
+        )
+
+    def _calculationGroupFromJSON(
+        self, roleUri: str, metaData: Mapping[str, Any]
+    ) -> CalculationGroup:
+        """One entry of the top-level "calculation" section, as written by
+        TaxonomyInfoExtractor.extractCalculation()."""
+        return CalculationGroup(
+            roleUri=roleUri,
+            relationships=tuple(
+                CalculationRelationship(
+                    roleUri=roleUri,
+                    source=self.getConcept(jrel["source"]),
+                    target=self.getConcept(jrel["target"]),
+                    weight=float(jrel["weight"]),
+                    order=float(jrel["order"]),
+                )
+                for jrel in metaData["relationships"]
+            ),
         )
 
     @staticmethod
@@ -1539,6 +1606,13 @@ class Taxonomy:
     @property
     def presentation(self) -> tuple[PresentationGroup, ...]:
         return self._groups
+
+    @property
+    def calculation(self) -> tuple[CalculationGroup, ...]:
+        """One CalculationGroup per ELR with XBRL 2.1 summation-item arcs.
+        Empty if the taxonomy has no calculation linkbase, or its JSON
+        predates calculations being extracted."""
+        return self._calculation
 
     @property
     def hypercubes(self) -> frozenset[Concept]:
