@@ -12,6 +12,7 @@ plugin decides where to put it.
 from __future__ import annotations
 
 import json
+import math
 from collections import Counter, defaultdict
 from collections.abc import Collection, Iterable, Iterator, Mapping
 from pathlib import Path
@@ -220,6 +221,7 @@ class TaxonomyInfoExtractor:
         self.taxonomyJson["entryPoint"] = self.options.entrypointFile
 
         self.extractPresentation()
+        self.extractCalculation()
         # Extract dimension defaults before other dimension-related information
         # (used by other dimension-related extraction methods)
         self.extractDimensionDefaults()
@@ -1197,3 +1199,64 @@ class TaxonomyInfoExtractor:
                 )
             self.taxonomyJson["presentation"][elrUri]["rows"] = rows
         self.cntlr.addToLog("Processing presentation network [completed]")
+
+    def extractCalculation(self) -> None:
+        """Write the top-level "calculation" section: for each ELR holding
+        XBRL 2.1 summation-item arcs, every arc as a source (the total),
+        target (the contributing item), weight and order.
+
+        A flat edge list rather than a tree like "presentation": a
+        calculation network need not have a single root, a concept can be
+        both a total and an item, and summation-item permits cycles, so the
+        arcs are kept exactly as declared and left for the reader to shape.
+        Written only when at least one ELR has summation-item arcs.
+
+        Calculations 1.1 arcs (a different arcrole, with different
+        semantics) are not extracted, only reported."""
+        self.cntlr.addToLog("Processing calculation network")
+        if calc11Elrs := self.model.linkrolesFor(XbrlConst.summationItem11):
+            self.diagnostics.emit(
+                ArelleDiagnostic.warning(
+                    "Calculations 1.1 summation-item relationships are not supported so are being ignored",
+                    elrs=calc11Elrs,
+                ),
+            )
+        calculation: dict[str, dict[str, Any]] = {}
+        for elrUri in self.model.linkrolesFor(XbrlConst.summationItem):
+            relSet = self.model.conceptRelationshipSet(XbrlConst.summationItem, elrUri)
+            relationships = [
+                {
+                    "source": qnameOf(source),
+                    "target": rel.targetQName,
+                    "weight": self._summationWeight(elrUri, source, rel),
+                    "order": rel.order,
+                }
+                for source, rels in relSet.relationshipsBySource()
+                for rel in rels
+            ]
+            if relationships:
+                calculation[elrUri] = {"relationships": relationships}
+        if calculation:
+            self.taxonomyJson["calculation"] = calculation
+        self.cntlr.addToLog("Processing calculation network [completed]")
+
+    @staticmethod
+    def _summationWeight(
+        elrUri: str, source: ModelConcept, rel: ConceptRelationship
+    ) -> float:
+        """The arc's weight, which XBRL 2.1 section 5.2.5.2.1 requires be
+        present and nonzero. Any value Arelle's own validation would have
+        rejected (absent, not a number, zero) is a model inconsistency here
+        rather than something to carry into the JSON -- NaN would not even
+        serialise as valid JSON."""
+        weight = rel.weight
+        if weight is None or math.isnan(weight) or weight == 0:
+            raise ArelleModelInconsistency(
+                ArelleDiagnostic.error(
+                    "Summation-item relationship has no valid (nonzero, numeric) weight",
+                    elr=elrUri,
+                    concepts=(qnameOf(source), rel.targetQName),
+                    weight=weight,
+                )
+            )
+        return weight

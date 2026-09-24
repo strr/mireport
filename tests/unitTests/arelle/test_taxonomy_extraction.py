@@ -1668,3 +1668,194 @@ class TestExtractDimensionDefinitionsDomainTrees:
             (c("Domain"), c("Asia"), 3.0, True),
         ]
         assert tree.members == taxonomy.getDomainMembersForExplicitDimension(axis)
+
+
+class StubCalculationRelSet:
+    """Serves canned (source, relationships) groups, like the real
+    ConceptRelationshipSet.relationshipsBySource()."""
+
+    def __init__(self, groups: list[tuple[StubConcept, list[ConceptRelationship]]]):
+        self._groups = groups
+
+    def relationshipsBySource(
+        self,
+    ) -> list[tuple[StubConcept, list[ConceptRelationship]]]:
+        return self._groups
+
+
+class TestExtractCalculation:
+    ELR = "https://example.com/role/income"
+    OTHER_ELR = "https://example.com/role/revenue"
+    NAMES = ("Profit", "Revenue", "Costs", "ProductSales", "ServiceSales")
+
+    def setup_method(self) -> None:
+        self.c = {n: StubConcept(qn(n), isNumeric=True) for n in self.NAMES}
+
+    def calc(
+        self, target: str, weight: float | None, order: float
+    ) -> ConceptRelationship:
+        return conceptRel(
+            self.c[target],
+            arcrole=XbrlConst.summationItem,
+            weight=weight,
+            order=order,
+        )
+
+    def networks(self) -> dict[str, StubCalculationRelSet]:
+        c = self.c
+        # ELR:        Profit = Revenue - Costs
+        # OTHER_ELR:  Revenue = ProductSales + 0.5 * ServiceSales
+        return {
+            self.ELR: StubCalculationRelSet(
+                [
+                    (
+                        c["Profit"],
+                        [
+                            self.calc("Revenue", 1.0, 1.0),
+                            self.calc("Costs", -1.0, 2.0),
+                        ],
+                    )
+                ]
+            ),
+            self.OTHER_ELR: StubCalculationRelSet(
+                [
+                    (
+                        c["Revenue"],
+                        [
+                            self.calc("ProductSales", 1.0, 1.0),
+                            self.calc("ServiceSales", 0.5, 2.0),
+                        ],
+                    )
+                ]
+            ),
+        }
+
+    def extract(
+        self,
+        networks: dict[str, StubCalculationRelSet],
+        calc11Elrs: list[str] | None = None,
+    ) -> tuple[TaxonomyInfoExtractor, list[ArelleDiagnostic]]:
+        extractor, token = makeExtractor(
+            {},
+            {(XbrlConst.summationItem, elr): rs for elr, rs in networks.items()},
+            linkrolesByArcrole={
+                XbrlConst.summationItem: list(networks),
+                XbrlConst.summationItem11: calc11Elrs or [],
+            },
+        )
+        extractor.extractCalculation()
+        return extractor, collectedDiagnostics(token)
+
+    def test_arcs_keep_elr_weight_and_order(self) -> None:
+        extractor, diagnostics = self.extract(self.networks())
+        assert diagnostics == []
+
+        def arc(source: str, target: str, weight: float, order: float) -> Any:
+            return {
+                "source": qn(source),
+                "target": qn(target),
+                "weight": weight,
+                "order": order,
+            }
+
+        assert extractor.taxonomyJson["calculation"] == {
+            self.ELR: {
+                "relationships": [
+                    arc("Profit", "Revenue", 1.0, 1.0),
+                    arc("Profit", "Costs", -1.0, 2.0),
+                ]
+            },
+            self.OTHER_ELR: {
+                "relationships": [
+                    arc("Revenue", "ProductSales", 1.0, 1.0),
+                    arc("Revenue", "ServiceSales", 0.5, 2.0),
+                ]
+            },
+        }
+
+    def test_no_calculation_linkbase_writes_no_section(self) -> None:
+        extractor, diagnostics = self.extract({})
+        assert "calculation" not in extractor.taxonomyJson
+        assert diagnostics == []
+
+    def test_elr_with_no_arcs_writes_no_section(self) -> None:
+        extractor, _ = self.extract({self.ELR: StubCalculationRelSet([])})
+        assert "calculation" not in extractor.taxonomyJson
+
+    @pytest.mark.parametrize("weight", [None, float("nan"), 0.0])
+    def test_invalid_weight_is_inconsistent(self, weight: float | None) -> None:
+        networks = {
+            self.ELR: StubCalculationRelSet(
+                [(self.c["Profit"], [self.calc("Revenue", weight, 1.0)])]
+            )
+        }
+        with pytest.raises(ArelleModelInconsistency, match="weight"):
+            self.extract(networks)
+
+    def test_calculations_1_1_arcs_are_reported_not_extracted(self) -> None:
+        extractor, diagnostics = self.extract({}, calc11Elrs=[self.ELR])
+        assert "calculation" not in extractor.taxonomyJson
+        [diagnostic] = diagnostics
+        assert diagnostic.level == logging.WARNING
+        assert "Calculations 1.1" in diagnostic.text
+
+    def test_calculation_survives_into_json_and_loads_back(
+        self, tmp_path: Path
+    ) -> None:
+        # The writer/reader contract: what the extractor bakes is exactly
+        # what Taxonomy.fromJSON() reads back into CalculationGroup.
+        extractor, _ = self.extract(self.networks())
+        calculation = extractor.qnameConverter.convertRecursive(
+            extractor.taxonomyJson["calculation"]
+        )
+        conceptKeys = extractor.qnameConverter.convertRecursive(
+            [qn(n) for n in self.NAMES]
+        )
+        bits = {
+            "entryPoint": "test://extracted-calculation",
+            "namespaces": extractor.qnameConverter.getNamespacePrefixMap(),
+            "presentation": {},
+            "dimensions": {},
+            "calculation": calculation,
+            "concepts": {
+                key: {
+                    "labels": {},
+                    "dataType": "xbrli:monetaryItemType",
+                    "baseDataType": "xbrli:monetaryItemType",
+                    "periodType": "duration",
+                    "numeric": True,
+                }
+                for key in conceptKeys
+            },
+        }
+        path = tmp_path / "taxonomy.json"
+        writeDataFile(cast(Cntlr, StubCntlr()), path, "taxonomy", bits)
+        taxonomy = Taxonomy.fromJSON(json.loads(path.read_text()))
+
+        byName = dict(zip(self.NAMES, conceptKeys, strict=True))
+
+        def c(name: str) -> Concept:
+            return taxonomy.getConcept(byName[name])
+
+        assert [
+            (
+                group.roleUri,
+                [(r.source, r.target, r.weight, r.order) for r in group.relationships],
+            )
+            for group in taxonomy.calculation
+        ] == [
+            (
+                self.ELR,
+                [
+                    (c("Profit"), c("Revenue"), 1.0, 1.0),
+                    (c("Profit"), c("Costs"), -1.0, 2.0),
+                ],
+            ),
+            (
+                self.OTHER_ELR,
+                [
+                    (c("Revenue"), c("ProductSales"), 1.0, 1.0),
+                    (c("Revenue"), c("ServiceSales"), 0.5, 2.0),
+                ],
+            ),
+        ]
