@@ -113,6 +113,9 @@ class ConceptRelationship:
     contextElement: str | None
     isClosed: bool
     order: float
+    weight: float | None
+    """The arc's @weight: None on any arc that does not carry one (i.e. all
+    but calculation arcs), NaN if present but not a number."""
 
     @classmethod
     def fromArelle(cls, rel: ModelRelationship) -> Self:
@@ -146,6 +149,7 @@ class ConceptRelationship:
             contextElement=rel.contextElement,
             isClosed=rel.isClosed,
             order=rel.order,
+            weight=rel.weight,
         )
 
 
@@ -194,6 +198,22 @@ class ConceptRelationshipSet:
         return [
             ConceptRelationship.fromArelle(rel)
             for rel in self._relSet.fromModelObject(concept)
+        ]
+
+    def relationshipsBySource(
+        self,
+    ) -> list[tuple[ModelConcept, list[ConceptRelationship]]]:
+        """Every arc in the set, grouped by source concept, each group in arc
+        order, sources in the order of their first arc. Unlike walking down
+        from rootConcepts(), this reaches every arc even where the set has no
+        root -- as a calculation network may not, summation-item allowing
+        cycles of any kind."""
+        return [
+            (
+                _asConcept(source, lambda: f"as source in {self.linkrole}"),
+                [ConceptRelationship.fromArelle(rel) for rel in rels],
+            )
+            for source, rels in self._relSet.fromModelObjects().items()
         ]
 
     def hasRelationshipsFrom(self, concept: ModelConcept) -> bool:

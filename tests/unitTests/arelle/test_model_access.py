@@ -67,6 +67,7 @@ class StubRel:
         contextElement: str | None = None,
         isClosed: bool = False,
         order: float = 1.0,
+        weight: float | None = None,
         arcrole: str | None = "https://example.com/arcrole",
         linkrole: str = "https://example.com/elr",
     ) -> None:
@@ -79,6 +80,7 @@ class StubRel:
         self.contextElement = contextElement
         self.isClosed = isClosed
         self.order = order
+        self.weight = weight
 
 
 class StubRelSet:
@@ -88,14 +90,19 @@ class StubRelSet:
         roots: list[Any] | None = None,
         fromMap: dict[int, list[StubRel]] | None = None,
         toMap: dict[int, list[StubRel]] | None = None,
+        sources: list[tuple[Any, list[StubRel]]] | None = None,
     ) -> None:
         self.linkrole = linkrole
+        self._sources = sources or []
         self.rootConcepts = roots if roots is not None else []
         self._fromMap = fromMap or {}
         self._toMap = toMap or {}
 
     def fromModelObject(self, obj: Any) -> list[StubRel]:
         return self._fromMap.get(id(obj), [])
+
+    def fromModelObjects(self) -> dict[Any, list[StubRel]]:
+        return dict(self._sources)
 
     def toModelObject(self, obj: Any) -> list[StubRel]:
         return self._toMap.get(id(obj), [])
@@ -192,6 +199,15 @@ class TestConceptRelationship:
         )
         assert rel.order == 2.5
 
+    @pytest.mark.parametrize("weight", [1.0, -1.0, 0.5, None])
+    def test_carries_weight_through(self, weight: float | None) -> None:
+        target = MagicMock(spec=ModelConcept)
+        target.qname = qn()
+        rel = ConceptRelationship.fromArelle(
+            cast(Any, StubRel(toModelObject=target, weight=weight))
+        )
+        assert rel.weight == weight
+
 
 class TestConceptRelationshipSet:
     ARCROLE = XbrlConst.domainMember
@@ -235,6 +251,49 @@ class TestConceptRelationshipSet:
         with pytest.raises(ArelleModelInconsistency):
             crs.relationshipsFrom(cast(ModelConcept, source))
 
+    def test_relationships_by_source_groups_every_arc(self) -> None:
+        def concept(local: str) -> Any:
+            c = MagicMock(spec=ModelConcept)
+            c.qname = qn(local)
+            return c
+
+        total, revenue, costs, other = (
+            concept(n) for n in ("Total", "Revenue", "Costs", "Other")
+        )
+        relSet = StubRelSet(
+            sources=[
+                (
+                    total,
+                    [
+                        StubRel(toModelObject=revenue, order=1.0, weight=1.0),
+                        StubRel(toModelObject=costs, order=2.0, weight=-1.0),
+                    ],
+                ),
+                # A cycle back to Total: no root, but still reached.
+                (revenue, [StubRel(toModelObject=total, weight=1.0)]),
+                (other, []),
+            ]
+        )
+        crs, _ = self.makeSet(relSet)
+        assert [
+            (source, [(r.target, r.order, r.weight) for r in rels])
+            for source, rels in crs.relationshipsBySource()
+        ] == [
+            (total, [(revenue, 1.0, 1.0), (costs, 2.0, -1.0)]),
+            (revenue, [(total, 1.0, 1.0)]),
+            (other, []),
+        ]
+
+    def test_relationships_by_source_raises_on_non_concept_source(self) -> None:
+        target = MagicMock(spec=ModelConcept)
+        target.qname = qn()
+        relSet = StubRelSet(
+            sources=[(StubConcept(qn("Source")), [StubRel(toModelObject=target)])]
+        )
+        crs, _ = self.makeSet(relSet)
+        with pytest.raises(ArelleModelInconsistency):
+            crs.relationshipsBySource()
+
     def test_has_relationships(self) -> None:
         source = StubConcept(qn("Parent"))
         target = StubConcept(qn("Child"))
@@ -260,6 +319,7 @@ class TestConceptRelationshipSet:
             contextElement=None,
             isClosed=False,
             order=1.0,
+            weight=None,
         )
         assert crs.consecutiveSet(rel) is crs
 
@@ -285,6 +345,7 @@ class TestConceptRelationshipSet:
             contextElement=None,
             isClosed=False,
             order=1.0,
+            weight=None,
         )
         consecutive = crs.consecutiveSet(rel)
         assert consecutive is not crs

@@ -569,6 +569,7 @@ def conceptRel(
     preferredLabel: str | None = None,
     arcrole: str = XbrlConst.all,
     order: float = 1.0,
+    weight: float | None = None,
     consecutiveLinkrole: str = "https://example.com/elr",
 ) -> ConceptRelationship:
     assert target.qname is not None
@@ -582,6 +583,7 @@ def conceptRel(
         contextElement=None,
         isClosed=False,
         order=order,
+        weight=weight,
     )
 
 
