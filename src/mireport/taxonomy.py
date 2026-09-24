@@ -973,13 +973,15 @@ class Taxonomy:
         self,
         concepts: dict[str, Concept],
         entryPoint: str,
-        presentation: dict[str, dict[str, Any]],
-        dimensions: dict[str, dict],
+        presentation: Mapping[str, Mapping[str, Any]],
+        dimensions: Mapping[str, Mapping[str, Any]],
         qnameMaker: QNameMaker,
         utr: UTR,
         typedDomainWrapperElements: dict[str, TypedDomainWrapperElement] | None = None,
         references: Iterable[Mapping] | None = None,
     ) -> None:
+        # presentation and dimensions are only ever read, never modified, so
+        # the same parsed JSON can back any number of Taxonomy objects.
         self._entryPoint = entryPoint
         self._dimensions = dimensions
         self._qnameMaker = qnameMaker
@@ -1050,7 +1052,11 @@ class Taxonomy:
 
         self._dimensionDefaults: Mapping[Concept, Concept] = {
             self.getConcept(dimension): self.getConcept(domainMember)
-            for dimension, domainMember in dimensions.pop("_defaults", {}).items()
+            for dimension, domainMember in dimensions.get("_defaults", {}).items()
+        }
+        # Every other key of "dimensions" is a role; "_defaults" is not.
+        cubesByRole: Mapping[str, Mapping[str, Any]] = {
+            role: cubes for role, cubes in dimensions.items() if role != "_defaults"
         }
 
         self._hypercubeDeclarations: list[HypercubeDeclaration] = []
@@ -1067,7 +1073,7 @@ class Taxonomy:
         )
         # Every cube in the definition linkbase, whether or not we can model it.
         self._hypercubes = frozenset(
-            concepts[cubeQname] for cubes in dimensions.values() for cubeQname in cubes
+            concepts[cubeQname] for cubes in cubesByRole.values() for cubeQname in cubes
         )
 
         # The taxonomy's dimension container is decided from every declared
@@ -1079,7 +1085,7 @@ class Taxonomy:
         # taxonomy.
         containerCounts: Counter[DimensionContainerType] = Counter(
             DimensionContainerType(cubeDetails["xbrldt:contextElement"])
-            for cubes in dimensions.values()
+            for cubes in cubesByRole.values()
             for cubeDetails in cubes.values()
         )
         if containerCounts:
@@ -1091,7 +1097,7 @@ class Taxonomy:
                 else next(iter(winners))
             )
 
-        for role, cubes in dimensions.items():
+        for role, cubes in cubesByRole.items():
             defects: list[str] = []
             declarationsByPrimaryItem: dict[Concept, list[HypercubeDeclaration]] = (
                 defaultdict(list)
@@ -1099,26 +1105,24 @@ class Taxonomy:
 
             for cubeQname, cubeDetails in cubes.items():
                 hc_concept = concepts[cubeQname]
-                closed = bool(cubeDetails.pop("xbrldt:closed"))
+                closed = bool(cubeDetails["xbrldt:closed"])
                 # Older baked JSON (and third-party JSON we have not re-baked)
                 # predates the "type" key; its absence means positive.
                 cubeType = HypercubeType(
-                    cubeDetails.pop("type", HypercubeType.Positive)
+                    cubeDetails.get("type", HypercubeType.Positive)
                 )
-                container = DimensionContainerType(
-                    cubeDetails.pop("xbrldt:contextElement")
-                )
+                container = DimensionContainerType(cubeDetails["xbrldt:contextElement"])
 
                 primaryItemRels = [
                     Relationship(role, depth, concepts[qname])
-                    for depth, qname in cubeDetails.pop("primaryItems", [])
+                    for depth, qname in cubeDetails.get("primaryItems", [])
                 ]
 
                 explicitDimensionsByName = {
                     concepts[dimQname]: frozenset(
                         concepts[member] for member in memberQnameList
                     )
-                    for dimQname, memberQnameList in cubeDetails.pop(
+                    for dimQname, memberQnameList in cubeDetails.get(
                         "explicitDimensions", {}
                     ).items()
                 }
@@ -1129,7 +1133,7 @@ class Taxonomy:
 
                 typedDimensions = frozenset(
                     concepts[dimQname]
-                    for dimQname in cubeDetails.pop("typedDimensions", [])
+                    for dimQname in cubeDetails.get("typedDimensions", [])
                 )
 
                 declaration = HypercubeDeclaration(
@@ -1613,7 +1617,6 @@ def _createTaxonomyFromJSON(bits: dict) -> None:
         raise TaxonomyException(
             f"Already loaded taxonomy. Taxonomies loaded: {' '.join(_TAXONOMIES.keys())}"
         )
-
     qnameMaker = getBootstrapQNameMaker()
     for prefix, namespace in bits["namespaces"].items():
         qnameMaker.addNamespacePrefix(prefix, namespace)
