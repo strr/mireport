@@ -70,6 +70,13 @@ class PeriodType(StrEnum):
     Instant = "instant"
 
 
+class Balance(StrEnum):
+    """A monetary concept's xbrli:balance (XBRL 2.1 section 5.1.1.2)."""
+
+    Debit = "debit"
+    Credit = "credit"
+
+
 class DimensionContainerType(StrEnum):
     Segment = "segment"
     Scenario = "scenario"
@@ -121,6 +128,7 @@ class Concept:
         "_qnameMaker",
         "_taxonomy",
         "_typedElementQName",
+        "balance",
         "baseDataType",
         "dataType",
         "periodType",
@@ -146,6 +154,12 @@ class Concept:
             raise TaxonomyException(
                 f"Concept {self.qname} does not specify a period type."
             )
+
+        # Optional, unlike periodType: absent for every non-monetary concept
+        # and for any monetary one that declares no xbrli:balance.
+        self.balance: Balance | None = None
+        if (balance := details.get("balance")) is not None:
+            self.balance = Balance(balance)
 
         if (data_type := details.get("dataType")) is not None:
             self.dataType = self._qnameMaker.fromString(data_type)
