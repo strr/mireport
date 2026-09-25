@@ -89,6 +89,19 @@ class HypercubeType(StrEnum):
     Negative = "negative"  # "notAll": these dimension combinations are excluded
 
 
+class CalculationArcrole(StrEnum):
+    """Which summation-item arcrole a taxonomy's calculation relationships
+    use. Both have the same shape (source is the total, target the
+    contributing item, with a weight and an order), so are extracted
+    identically; they differ in how a processor checks a report against
+    them."""
+
+    Xbrl21 = "http://www.xbrl.org/2003/arcrole/summation-item"
+    """XBRL 2.1 section 5.2.5.2."""
+    Calculations11 = "https://xbrl.org/2023/arcrole/summation-item"
+    """Calculations 1.1."""
+
+
 class PresentationStyle(Enum):
     """The style of a particular presentation group (ELR)."""
 
@@ -855,7 +868,8 @@ class PresentationGroup(NamedTuple):
 
 @dataclass(frozen=True, slots=True)
 class CalculationRelationship:
-    """One XBRL 2.1 summation-item arc: target contributes to source's total,
+    """One summation-item arc, under either arcrole (see
+    Taxonomy.calculationArcrole): target contributes to source's total,
     multiplied by weight (XBRL 2.1 section 5.2.5.2). Named for the arc's own
     direction, so source is the total and target the contributing item."""
 
@@ -1094,6 +1108,7 @@ class Taxonomy:
         typedDomainWrapperElements: dict[str, TypedDomainWrapperElement] | None = None,
         references: Iterable[Mapping] | None = None,
         calculation: Mapping[str, Mapping[str, Any]] | None = None,
+        calculationArcrole: str | None = None,
     ) -> None:
         # presentation, dimensions and calculation are only ever read, never
         # modified, so the same parsed JSON can back any number of Taxonomy
@@ -1144,6 +1159,7 @@ class Taxonomy:
             self._calculationGroupFromJSON(roleUri, bits)
             for roleUri, bits in (calculation or {}).items()
         )
+        self._calculationArcrole = self._calculationArcroleFromJSON(calculationArcrole)
 
         self._lookupConceptsByName: dict[str, list[Concept]] = defaultdict(list)
         for concept in concepts.values():
@@ -1412,7 +1428,28 @@ class Taxonomy:
             # Absent both when the DTS has no calculation linkbase and in JSON
             # baked before calculations were extracted.
             calculation=bits.get("calculation"),
+            calculationArcrole=bits.get("calculationArcrole"),
         )
+
+    def _calculationArcroleFromJSON(
+        self, arcrole: str | None
+    ) -> CalculationArcrole | None:
+        """The top-level "calculationArcrole" value, as written by
+        TaxonomyInfoExtractor.extractCalculation() alongside "calculation".
+        Meaningless without any calculation groups, so None then."""
+        if not self._calculation:
+            return None
+        if arcrole is None:
+            # Baked before the arcrole was recorded, when only 2003
+            # summation-item arcs were ever extracted.
+            return CalculationArcrole.Xbrl21
+        try:
+            return CalculationArcrole(arcrole)
+        except ValueError:
+            raise ValueError(
+                f"Unknown calculationArcrole {arcrole!r}; expected one of "
+                f"{[str(a) for a in CalculationArcrole]}"
+            ) from None
 
     def _calculationGroupFromJSON(
         self, roleUri: str, metaData: Mapping[str, Any]
@@ -1609,10 +1646,23 @@ class Taxonomy:
 
     @property
     def calculation(self) -> tuple[CalculationGroup, ...]:
-        """One CalculationGroup per ELR with XBRL 2.1 summation-item arcs.
-        Empty if the taxonomy has no calculation linkbase, or its JSON
-        predates calculations being extracted."""
+        """One CalculationGroup per ELR with summation-item arcs, under
+        either arcrole (see calculationArcrole). Empty if the taxonomy has
+        no calculation linkbase, or its JSON predates calculations being
+        extracted."""
         return self._calculation
+
+    @property
+    def calculationArcrole(self) -> CalculationArcrole | None:
+        """The summation-item arcrole the taxonomy's calculation
+        relationships use: one fact about the whole taxonomy, not per group.
+        None exactly when there are no calculation groups.
+
+        A DTS mixing both arcroles (warned about when extracted) has all its
+        arcs in Taxonomy.calculation and this set to Calculations11, since a
+        Calculations 1.1 processor is the only one that sees all of them (an
+        XBRL 2.1 one ignores the 2023 arcs)."""
+        return self._calculationArcrole
 
     @property
     def hypercubes(self) -> frozenset[Concept]:

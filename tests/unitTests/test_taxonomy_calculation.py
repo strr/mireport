@@ -15,12 +15,19 @@ import pytest
 
 from mireport.data import taxonomies
 from mireport.json import getJsonFiles, getObject
-from mireport.taxonomy import CalculationGroup, CalculationRelationship, Taxonomy
+from mireport.taxonomy import (
+    CalculationArcrole,
+    CalculationGroup,
+    CalculationRelationship,
+    Taxonomy,
+)
 
 _NS = "https://example.com/vsme"
 _STANDARD_LABEL = "http://www.xbrl.org/2003/role/label"
 _ROLE = "https://example.com/role/income"
 _OTHER_ROLE = "https://example.com/role/revenue"
+_XBRL21_ARCROLE = "http://www.xbrl.org/2003/arcrole/summation-item"
+_CALC11_ARCROLE = "https://xbrl.org/2023/arcrole/summation-item"
 
 
 def _concept() -> dict[str, Any]:
@@ -67,7 +74,9 @@ _CALCULATION = {
 }
 
 
-def _bits(calculation: dict[str, Any] | None) -> dict[str, Any]:
+def _bits(
+    calculation: dict[str, Any] | None, arcrole: str | None = _XBRL21_ARCROLE
+) -> dict[str, Any]:
     bits: dict[str, Any] = {
         "entryPoint": "test://calculation",
         "namespaces": {"vsme": _NS},
@@ -77,6 +86,8 @@ def _bits(calculation: dict[str, Any] | None) -> dict[str, Any]:
     }
     if calculation is not None:
         bits["calculation"] = calculation
+        if arcrole is not None:
+            bits["calculationArcrole"] = arcrole
     return bits
 
 
@@ -135,6 +146,49 @@ class TestCalculation:
         bits = _bits(_CALCULATION)
         Taxonomy.fromJSON(bits)
         assert bits["calculation"] == _CALCULATION
+
+
+class TestCalculationArcrole:
+    @pytest.mark.parametrize(
+        ("arcrole", "expected"),
+        [
+            (_XBRL21_ARCROLE, CalculationArcrole.Xbrl21),
+            (_CALC11_ARCROLE, CalculationArcrole.Calculations11),
+        ],
+    )
+    def test_one_arcrole_for_the_whole_model(
+        self, arcrole: str, expected: CalculationArcrole
+    ) -> None:
+        taxonomy = Taxonomy.fromJSON(_bits(_CALCULATION, arcrole))
+        assert taxonomy.calculationArcrole is expected
+        assert taxonomy.calculationArcrole == arcrole
+
+    def test_either_arcrole_loads_the_same_groups(self) -> None:
+        def shape(taxonomy: Taxonomy) -> list[Any]:
+            return [
+                (g.roleUri, [(r.source.qname, r.target.qname) for r in g.relationships])
+                for g in taxonomy.calculation
+            ]
+
+        assert shape(Taxonomy.fromJSON(_bits(_CALCULATION, _XBRL21_ARCROLE))) == shape(
+            Taxonomy.fromJSON(_bits(_CALCULATION, _CALC11_ARCROLE))
+        )
+
+    def test_json_baked_before_the_arcrole_was_recorded_is_xbrl_2_1(self) -> None:
+        # Such JSON only ever held 2003 summation-item arcs: the extractor
+        # ignored Calculations 1.1 ones until the arcrole was recorded.
+        taxonomy = Taxonomy.fromJSON(_bits(_CALCULATION, arcrole=None))
+        assert taxonomy.calculationArcrole is CalculationArcrole.Xbrl21
+
+    def test_no_calculation_has_no_arcrole(self) -> None:
+        assert Taxonomy.fromJSON(_bits(None)).calculationArcrole is None
+        assert Taxonomy.fromJSON(_bits({})).calculationArcrole is None
+
+    def test_unknown_arcrole_raises(self) -> None:
+        with pytest.raises(ValueError, match="calculationArcrole"):
+            Taxonomy.fromJSON(
+                _bits(_CALCULATION, "https://example.com/arcrole/summation-item")
+            )
 
 
 class TestNoCalculation:
