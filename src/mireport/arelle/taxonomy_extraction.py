@@ -1202,8 +1202,8 @@ class TaxonomyInfoExtractor:
 
     def extractCalculation(self) -> None:
         """Write the top-level "calculation" section: for each ELR holding
-        XBRL 2.1 summation-item arcs, every arc as a source (the total),
-        target (the contributing item), weight and order.
+        summation-item arcs, every arc as a source (the total), target (the
+        contributing item), weight and order.
 
         A flat edge list rather than a tree like "presentation": a
         calculation network need not have a single root, a concept can be
@@ -1211,34 +1211,65 @@ class TaxonomyInfoExtractor:
         arcs are kept exactly as declared and left for the reader to shape.
         Written only when at least one ELR has summation-item arcs.
 
-        Calculations 1.1 arcs (a different arcrole, with different
-        semantics) are not extracted, only reported."""
+        The XBRL 2.1 and Calculations 1.1 summation-item arcroles are read
+        alike, as one relationship set per ELR -- as Arelle's own
+        Calculations 1.1 validation reads them -- since they differ only in
+        how a report is checked against them, not in what an arc says. Which
+        one the DTS uses is written once, as "calculationArcrole", beside
+        "calculation"; see _calculationArcrole() for a DTS that uses both."""
         self.cntlr.addToLog("Processing calculation network")
-        if calc11Elrs := self.model.linkrolesFor(XbrlConst.summationItem11):
-            self.diagnostics.emit(
-                ArelleDiagnostic.warning(
-                    "Calculations 1.1 summation-item relationships are not supported so are being ignored",
-                    elrs=calc11Elrs,
-                ),
-            )
         calculation: dict[str, dict[str, Any]] = {}
-        for elrUri in self.model.linkrolesFor(XbrlConst.summationItem):
-            relSet = self.model.conceptRelationshipSet(XbrlConst.summationItem, elrUri)
-            relationships = [
-                {
-                    "source": qnameOf(source),
-                    "target": rel.targetQName,
-                    "weight": self._summationWeight(elrUri, source, rel),
-                    "order": rel.order,
-                }
-                for source, rels in relSet.relationshipsBySource()
-                for rel in rels
-            ]
+        arcsByArcrole: Counter[str] = Counter()
+        for elrUri in self.model.linkrolesFor(*XbrlConst.summationItems):
+            relSet = self.model.conceptRelationshipSet(XbrlConst.summationItems, elrUri)
+            relationships = []
+            for source, rels in relSet.relationshipsBySource():
+                for rel in rels:
+                    arcsByArcrole[rel.arcrole] += 1
+                    relationships.append(
+                        {
+                            "source": qnameOf(source),
+                            "target": rel.targetQName,
+                            "weight": self._summationWeight(elrUri, source, rel),
+                            "order": rel.order,
+                        }
+                    )
             if relationships:
                 calculation[elrUri] = {"relationships": relationships}
         if calculation:
             self.taxonomyJson["calculation"] = calculation
+            self.taxonomyJson["calculationArcrole"] = self._calculationArcrole(
+                arcsByArcrole
+            )
         self.cntlr.addToLog("Processing calculation network [completed]")
+
+    def _calculationArcrole(self, arcsByArcrole: Counter[str]) -> str:
+        """The one summation-item arcrole to record for the whole DTS, given
+        how many extracted arcs use each.
+
+        A DTS using both is legal but unusual, so is warned about, and
+        recorded as Calculations 1.1 however the arcs are split: a
+        Calculations 1.1 processor treats arcs under either arcrole as
+        calculation relationships, so is the only one that sees the whole
+        network as extracted, where an XBRL 2.1 processor ignores the 2023
+        arcs altogether. Writing every arc back under the 2003 arcrole would
+        instead expose the 1.1 arcs to 2.1 semantics they were not authored
+        for."""
+        if len(arcsByArcrole) == 1:
+            [arcrole] = arcsByArcrole
+            return arcrole
+        self.diagnostics.emit(
+            ArelleDiagnostic.warning(
+                f"Taxonomy mixes {XbrlConst.summationItem} and "
+                f"{XbrlConst.summationItem11} summation-item relationships; "
+                "all are extracted, recorded as Calculations 1.1",
+                xbrl21Arcs=arcsByArcrole[XbrlConst.summationItem],
+                calculations11Arcs=arcsByArcrole[XbrlConst.summationItem11],
+                xbrl21Elrs=self.model.linkrolesFor(XbrlConst.summationItem),
+                calculations11Elrs=self.model.linkrolesFor(XbrlConst.summationItem11),
+            ),
+        )
+        return XbrlConst.summationItem11
 
     @staticmethod
     def _summationWeight(

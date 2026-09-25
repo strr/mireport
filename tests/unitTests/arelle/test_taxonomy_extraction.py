@@ -39,7 +39,7 @@ from mireport.arelle.taxonomy_extraction import (
     TaxonomyInfoExtractor,
     writeDataFile,
 )
-from mireport.taxonomy import Concept, Taxonomy
+from mireport.taxonomy import CalculationArcrole, Concept, Taxonomy
 
 
 def qn(local: str = "Thing", ns: str = "https://example.com/vsme") -> QName:
@@ -139,11 +139,15 @@ class StubValidatedModel:
         return self._conceptRelSets[linkrole]
 
     def linkrolesFor(self, *arcroles: str) -> list[str]:
-        return [
-            linkrole
-            for arcrole in arcroles
-            for linkrole in self._linkrolesByArcrole.get(arcrole, [])
-        ]
+        # Deduplicated, as ValidatedModel.linkrolesFor() is: a linkrole with
+        # base sets for several of arcroles is listed once.
+        return list(
+            dict.fromkeys(
+                linkrole
+                for arcrole in arcroles
+                for linkrole in self._linkrolesByArcrole.get(arcrole, [])
+            )
+        )
 
     def baseSetsInDTS(self) -> list[tuple[str, str]]:
         return list(self._baseSets)
@@ -1687,32 +1691,44 @@ class TestExtractCalculation:
     ELR = "https://example.com/role/income"
     OTHER_ELR = "https://example.com/role/revenue"
     NAMES = ("Profit", "Revenue", "Costs", "ProductSales", "ServiceSales")
+    XBRL21 = XbrlConst.summationItem
+    CALC11 = XbrlConst.summationItem11
 
     def setup_method(self) -> None:
         self.c = {n: StubConcept(qn(n), isNumeric=True) for n in self.NAMES}
 
     def calc(
-        self, target: str, weight: float | None, order: float
+        self,
+        target: str,
+        weight: float | None,
+        order: float,
+        arcrole: str = XbrlConst.summationItem,
     ) -> ConceptRelationship:
         return conceptRel(
             self.c[target],
-            arcrole=XbrlConst.summationItem,
+            arcrole=arcrole,
             weight=weight,
             order=order,
         )
 
-    def networks(self) -> dict[str, StubCalculationRelSet]:
+    def networks(
+        self, arcrole: str = XbrlConst.summationItem, otherArcrole: str | None = None
+    ) -> dict[str, StubCalculationRelSet]:
+        """ELR:        Profit = Revenue - Costs
+        OTHER_ELR:  Revenue = ProductSales + 0.5 * ServiceSales
+
+        ELR's arcs under arcrole, OTHER_ELR's under otherArcrole (default:
+        the same one)."""
         c = self.c
-        # ELR:        Profit = Revenue - Costs
-        # OTHER_ELR:  Revenue = ProductSales + 0.5 * ServiceSales
+        otherArcrole = otherArcrole or arcrole
         return {
             self.ELR: StubCalculationRelSet(
                 [
                     (
                         c["Profit"],
                         [
-                            self.calc("Revenue", 1.0, 1.0),
-                            self.calc("Costs", -1.0, 2.0),
+                            self.calc("Revenue", 1.0, 1.0, arcrole),
+                            self.calc("Costs", -1.0, 2.0, arcrole),
                         ],
                     )
                 ]
@@ -1722,8 +1738,8 @@ class TestExtractCalculation:
                     (
                         c["Revenue"],
                         [
-                            self.calc("ProductSales", 1.0, 1.0),
-                            self.calc("ServiceSales", 0.5, 2.0),
+                            self.calc("ProductSales", 1.0, 1.0, otherArcrole),
+                            self.calc("ServiceSales", 0.5, 2.0, otherArcrole),
                         ],
                     )
                 ]
@@ -1731,34 +1747,40 @@ class TestExtractCalculation:
         }
 
     def extract(
-        self,
-        networks: dict[str, StubCalculationRelSet],
-        calc11Elrs: list[str] | None = None,
+        self, networks: dict[str, StubCalculationRelSet]
     ) -> tuple[TaxonomyInfoExtractor, list[ArelleDiagnostic]]:
+        # Each ELR is served as the one combined relationship set over both
+        # summation-item arcroles, and listed under whichever arcroles its
+        # arcs use (the 2003 one for an ELR with none).
+        linkrolesByArcrole: dict[str, list[str]] = {}
+        for elr, relSet in networks.items():
+            arcroles = {
+                rel.arcrole
+                for _, rels in relSet.relationshipsBySource()
+                for rel in rels
+            } or {self.XBRL21}
+            for arcrole in sorted(arcroles):
+                linkrolesByArcrole.setdefault(arcrole, []).append(elr)
         extractor, token = makeExtractor(
             {},
-            {(XbrlConst.summationItem, elr): rs for elr, rs in networks.items()},
-            linkrolesByArcrole={
-                XbrlConst.summationItem: list(networks),
-                XbrlConst.summationItem11: calc11Elrs or [],
-            },
+            {(XbrlConst.summationItems, elr): rs for elr, rs in networks.items()},
+            linkrolesByArcrole=linkrolesByArcrole,
         )
         extractor.extractCalculation()
         return extractor, collectedDiagnostics(token)
 
-    def test_arcs_keep_elr_weight_and_order(self) -> None:
-        extractor, diagnostics = self.extract(self.networks())
-        assert diagnostics == []
+    @staticmethod
+    def arc(source: str, target: str, weight: float, order: float) -> Any:
+        return {
+            "source": qn(source),
+            "target": qn(target),
+            "weight": weight,
+            "order": order,
+        }
 
-        def arc(source: str, target: str, weight: float, order: float) -> Any:
-            return {
-                "source": qn(source),
-                "target": qn(target),
-                "weight": weight,
-                "order": order,
-            }
-
-        assert extractor.taxonomyJson["calculation"] == {
+    def expectedCalculation(self) -> dict[str, Any]:
+        arc = self.arc
+        return {
             self.ELR: {
                 "relationships": [
                     arc("Profit", "Revenue", 1.0, 1.0),
@@ -1773,14 +1795,31 @@ class TestExtractCalculation:
             },
         }
 
+    def test_arcs_keep_elr_weight_and_order(self) -> None:
+        extractor, diagnostics = self.extract(self.networks())
+        assert diagnostics == []
+        assert extractor.taxonomyJson["calculation"] == self.expectedCalculation()
+
+    def test_xbrl_2_1_arcrole_is_recorded_for_the_model(self) -> None:
+        extractor, _ = self.extract(self.networks())
+        assert extractor.taxonomyJson["calculationArcrole"] == self.XBRL21
+
+    def test_calculations_1_1_arcs_are_extracted_the_same_way(self) -> None:
+        extractor, diagnostics = self.extract(self.networks(self.CALC11))
+        assert diagnostics == []
+        assert extractor.taxonomyJson["calculation"] == self.expectedCalculation()
+        assert extractor.taxonomyJson["calculationArcrole"] == self.CALC11
+
     def test_no_calculation_linkbase_writes_no_section(self) -> None:
         extractor, diagnostics = self.extract({})
         assert "calculation" not in extractor.taxonomyJson
+        assert "calculationArcrole" not in extractor.taxonomyJson
         assert diagnostics == []
 
     def test_elr_with_no_arcs_writes_no_section(self) -> None:
         extractor, _ = self.extract({self.ELR: StubCalculationRelSet([])})
         assert "calculation" not in extractor.taxonomyJson
+        assert "calculationArcrole" not in extractor.taxonomyJson
 
     @pytest.mark.parametrize("weight", [None, float("nan"), 0.0])
     def test_invalid_weight_is_inconsistent(self, weight: float | None) -> None:
@@ -1792,19 +1831,75 @@ class TestExtractCalculation:
         with pytest.raises(ArelleModelInconsistency, match="weight"):
             self.extract(networks)
 
-    def test_calculations_1_1_arcs_are_reported_not_extracted(self) -> None:
-        extractor, diagnostics = self.extract({}, calc11Elrs=[self.ELR])
-        assert "calculation" not in extractor.taxonomyJson
+    @pytest.mark.parametrize(
+        ("arcrole", "otherArcrole"),
+        [
+            (XbrlConst.summationItem, XbrlConst.summationItem11),
+            (XbrlConst.summationItem11, XbrlConst.summationItem),
+        ],
+    )
+    def test_mixed_arcroles_extract_every_arc_and_warn(
+        self, arcrole: str, otherArcrole: str
+    ) -> None:
+        extractor, diagnostics = self.extract(self.networks(arcrole, otherArcrole))
+        assert extractor.taxonomyJson["calculation"] == self.expectedCalculation()
         [diagnostic] = diagnostics
         assert diagnostic.level == logging.WARNING
-        assert "Calculations 1.1" in diagnostic.text
+        assert self.XBRL21 in diagnostic.text
+        assert self.CALC11 in diagnostic.text
+        byArcrole = {arcrole: self.ELR, otherArcrole: self.OTHER_ELR}
+        assert diagnostic.details == {
+            "xbrl21Arcs": 2,
+            "calculations11Arcs": 2,
+            "xbrl21Elrs": [byArcrole[self.XBRL21]],
+            "calculations11Elrs": [byArcrole[self.CALC11]],
+        }
 
+    @pytest.mark.parametrize("calc11Arcs", [1, 2, 3])
+    def test_mixed_arcroles_record_calculations_1_1_whatever_the_arc_counts(
+        self, calc11Arcs: int
+    ) -> None:
+        # Three 2003 arcs against one, two or three 1.1 ones in the same ELR:
+        # 1.1 is recorded however the arcs are split, not by majority.
+        c = self.c
+        items = ["Revenue", "Costs", "ProductSales"]
+        rels = [
+            self.calc(name, 1.0, float(i), self.XBRL21)
+            for i, name in enumerate(items, 1)
+        ] + [
+            self.calc("ServiceSales", 1.0, float(10 + i), self.CALC11)
+            for i in range(calc11Arcs)
+        ]
+        networks = {self.ELR: StubCalculationRelSet([(c["Profit"], rels)])}
+        extractor, diagnostics = self.extract(networks)
+        assert len(
+            extractor.taxonomyJson["calculation"][self.ELR]["relationships"]
+        ) == (3 + calc11Arcs)
+        assert extractor.taxonomyJson["calculationArcrole"] == self.CALC11
+        [diagnostic] = diagnostics
+        assert diagnostic.level == logging.WARNING
+        assert diagnostic.details["xbrl21Arcs"] == 3
+        assert diagnostic.details["calculations11Arcs"] == calc11Arcs
+
+    def test_arcroles_are_arelle_s(self) -> None:
+        # The extractor writes Arelle's constants; Taxonomy reads them back
+        # into CalculationArcrole without importing Arelle.
+        assert CalculationArcrole.Xbrl21 == XbrlConst.summationItem
+        assert CalculationArcrole.Calculations11 == XbrlConst.summationItem11
+
+    @pytest.mark.parametrize(
+        ("arcrole", "expected"),
+        [
+            (XbrlConst.summationItem, CalculationArcrole.Xbrl21),
+            (XbrlConst.summationItem11, CalculationArcrole.Calculations11),
+        ],
+    )
     def test_calculation_survives_into_json_and_loads_back(
-        self, tmp_path: Path
+        self, tmp_path: Path, arcrole: str, expected: CalculationArcrole
     ) -> None:
         # The writer/reader contract: what the extractor bakes is exactly
         # what Taxonomy.fromJSON() reads back into CalculationGroup.
-        extractor, _ = self.extract(self.networks())
+        extractor, _ = self.extract(self.networks(arcrole))
         calculation = extractor.qnameConverter.convertRecursive(
             extractor.taxonomyJson["calculation"]
         )
@@ -1817,6 +1912,7 @@ class TestExtractCalculation:
             "presentation": {},
             "dimensions": {},
             "calculation": calculation,
+            "calculationArcrole": extractor.taxonomyJson["calculationArcrole"],
             "concepts": {
                 key: {
                     "labels": {},
@@ -1859,3 +1955,4 @@ class TestExtractCalculation:
                 ],
             ),
         ]
+        assert taxonomy.calculationArcrole is expected
