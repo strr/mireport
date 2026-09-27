@@ -132,6 +132,8 @@ class Concept:
     __slots__ = (
         "_eeDomainMemberStrings",
         "_eeDomainMembers",
+        "_eeDomainTree",
+        "_eeDomainTreeJSON",
         "_isAbstract",
         "_isDimension",
         "_isHypercube",
@@ -199,6 +201,8 @@ class Concept:
         self._eeDomainMemberStrings: list[str] | None = None
         if (eeDom := other.get("ee20DomainMembers")) is not None:
             self._eeDomainMemberStrings = eeDom
+        self._eeDomainTree: EnumerationDomainTree | None = None
+        self._eeDomainTreeJSON: Mapping[str, Any] | None = other.get("ee20Domain")
 
     def __repr__(self) -> str:
         return f"Concept(qname={self.qname})"
@@ -233,6 +237,11 @@ class Concept:
                 taxonomy.getConcept(member) for member in self._eeDomainMemberStrings
             )
             self._eeDomainMemberStrings = None
+        if self._eeDomainTreeJSON is not None:
+            self._eeDomainTree = self._eeDomainTreeFromJSON(
+                taxonomy, self._eeDomainTreeJSON
+            )
+            self._eeDomainTreeJSON = None
         if self._typedElementQName is not None:
             try:
                 self.typedElement = taxonomy.getTypedDomainWrapperElement(
@@ -550,6 +559,42 @@ class Concept:
 
     def getEEDomain(self) -> tuple[Concept, ...]:
         return tuple(self._eeDomainMembers) if self._eeDomainMembers is not None else ()
+
+    def getEEDomainTree(self) -> EnumerationDomainTree | None:
+        """The declared domain tree getEEDomain() is flattened from: the
+        enum2:domain head, the enum2:linkrole it is declared under, and every
+        domain-member arc beneath the head.
+
+        None if this is not an enum2 concept, or the taxonomy JSON predates
+        enumeration domain trees being extracted."""
+        return self._eeDomainTree
+
+    def getEEDomainHead(self) -> Concept | None:
+        """The enum2:domain head of this concept's allowed values. See
+        getEEDomainTree() for the tree beneath it, and when this is None."""
+        return self._eeDomainTree.domainHead if self._eeDomainTree else None
+
+    def _eeDomainTreeFromJSON(
+        self, taxonomy: Taxonomy, jtree: Mapping[str, Any]
+    ) -> EnumerationDomainTree:
+        """A concept's "other"."ee20Domain", as written by
+        TaxonomyInfoExtractor.getDomainTreeForEnumeration()."""
+        return EnumerationDomainTree(
+            enumeration=self,
+            roleUri=jtree["elr"],
+            domainHead=taxonomy.getConcept(jtree["domain"]),
+            usable=bool(jtree["usable"]),
+            relationships=tuple(
+                DomainMemberRelationship(
+                    roleUri=jrel["elr"],
+                    parent=taxonomy.getConcept(jrel["parent"]),
+                    member=taxonomy.getConcept(jrel["member"]),
+                    order=float(jrel["order"]),
+                    usable=bool(jrel["usable"]),
+                )
+                for jrel in jtree["members"]
+            ),
+        )
 
     @property
     def references(self) -> tuple[Reference, ...]:
@@ -1002,6 +1047,41 @@ class DimensionDomainTree:
     def members(self) -> frozenset[Concept]:
         """The usable members of this tree, domainHead included if usable --
         this tree's contribution to ExplicitDimensionSignature.domain."""
+        usable = {rel.member for rel in self.relationships if rel.usable}
+        if self.usable:
+            usable.add(self.domainHead)
+        return frozenset(usable)
+
+
+@dataclass(frozen=True, slots=True)
+class EnumerationDomainTree:
+    """An enum2 concept's declared domain: domainHead is its enum2:domain,
+    roleUri its enum2:linkrole, usable its enum2:headUsable, and relationships
+    every domain-member arc reachable from domainHead in that linkrole,
+    depth-first with siblings in arc order -- the same walk, and the same
+    relationships, as a DimensionDomainTree's.
+
+    Unlike Concept.getEEDomain() (the flat tuple of allowed values), this
+    keeps the shape: the real head (which need not itself be allowed), its
+    linkrole, nesting, arc order and unusable members."""
+
+    enumeration: Concept
+    roleUri: str
+    """The enum2:linkrole the domain-member network is declared under."""
+    domainHead: Concept
+    usable: bool
+    """enum2:headUsable, i.e. whether domainHead is itself an allowed value."""
+    relationships: tuple[DomainMemberRelationship, ...]
+
+    def getChildren(self, parent: Concept) -> tuple[DomainMemberRelationship, ...]:
+        """parent's own domain-member relationships in this tree, in arc
+        order. Pass domainHead for the top level; a leaf gives ()."""
+        return tuple(rel for rel in self.relationships if rel.parent == parent)
+
+    @property
+    def members(self) -> frozenset[Concept]:
+        """The usable members of this tree, domainHead included if usable --
+        the same set as Concept.getEEDomain()."""
         usable = {rel.member for rel in self.relationships if rel.usable}
         if self.usable:
             usable.add(self.domainHead)
