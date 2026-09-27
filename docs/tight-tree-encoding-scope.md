@@ -1,6 +1,6 @@
 # Scope: tight `(indent, qname, ...)` rows for domain-member trees and calculation
 
-Status: **scoping only — nothing here is implemented.** Queue item M10.
+Status: **scoping only — nothing here is implemented.** Queue item M10. Complete draft for the user's go-ahead; §5 lists the decisions needed before dispatch.
 
 Goal: move mireport's baked-JSON encoding of domain-member trees (`explicitDimensionDomains`,
 `ee20Domain`) and calculation (`calculation`) off today's per-arc dicts / flat edge list onto the
@@ -283,12 +283,109 @@ everywhere, not bytes.
 
 ## 3. Consumer inventory
 
-_Still investigating._
+Headline: **no oim `src/` module reads mireport's JSON**. Every one of them goes through the Python
+API, which §2 keeps identical for domain trees and changes only in relationship *order* for
+calculation. The real work on the oim side is in **tests**: `tests/xbrl21_to_tavi/builders.py`
+hand-writes mireport JSON in today's wire shape. (oim state read at U10's tip `2df5496`, read-only
+via `git show`, because U11 is running in that worktree.)
+
+### 3.1 mireport (this repo)
+
+| Where | What changes | Invasiveness |
+|---|---|---|
+| `arelle/taxonomy_extraction.py` | `DefinitionRelationship` becomes `DomainMemberRow`. `walkDefinitionRelationships` gains `indent`, keeps its `_seen` key. `getDomainMemberArcs` serialises rows, and `getDomainTreesForExplicitDimension` adds `targetRole` when set (enum2 trees never do). New `CalculationRow` + `walkCalculationChildren` with cycle detection. `extractCalculation` drops `relationshipsBySource()` and writes `rows`. Docstrings for `extractCalculation` and `walkDefinitionRelationships` updated. | Moderate, contained: around 120 lines in one module |
+| `arelle/model_access.py` | `relationshipsBySource()` loses its only caller. Delete it, or keep it for the unreached-arc diagnostic in §2.2 step 2 (its docstring justifies it by cycles, which are now an error). | Trivial |
+| `taxonomy.py` | `_domainTreeFromJSON`, `Concept._eeDomainTreeFromJSON` and `_calculationGroupFromJSON` read `rows` through one shared stack-based helper, with the ancestor-cycle guard. `DimensionDomainTree` / `EnumerationDomainTree` / `DomainMemberRelationship` are unchanged. `CalculationGroup` is unchanged except that its docstring now says preorder and acyclic. | Small: 3 loaders plus one helper |
+| Baked data | Re-bake all 4 `data/taxonomies/vsme-*.json` (§4). | Scripted, but real production data |
+| Tests | `tests/unitTests/arelle/test_taxonomy_extraction.py`: `TestWalkDefinitionRelationships` (around 20 touchpoints), the `explicitDimensionDomains` / `ee20Domain` extraction assertions, and `expectedCalculation()`. Add new cases: a direct cycle, a self-loop, a rootless cycle, a mixed-arcrole duplicate arc, and a shared calc total. `test_taxonomy_domain_trees.py`, `test_taxonomy_enumeration_domain_trees.py` and `test_taxonomy_calculation.py` hand-build JSON, so switch them to rows and add the loader cycle-guard cases. `integrationTests/test_calculation_arcroles.py` reads `baked["calculation"]` directly. | Moderate: mostly mechanical fixture reshaping |
+| Anything else | Checked, nothing else reads these keys: `taxonomy_checker.py`, `scripts/dump-taxonomy.py`, the report/coverage generators and the webapp. | None |
+
+**Old-shape JSON: recommend no dual-read.** The loader should accept `rows` only. This matches
+the project's legacy-purge precedent (U4/U8 on the oim side, and mireport's own "Drop the legacy
+... keys" line of commits). Every baked file gets regenerated in the same item, and the only other
+producer of old-shape JSON is oim's test builders, which §5 migrates in lockstep. The alternative
+is a transitional dual-read that lets the oim tests stay green between the M and U items without
+lockstep. It is listed as an open decision in §5, not assumed.
+
+### 3.2 `oim_to_xbrl21` / `xbrl21_to_tavi`
+
+| Consumer | Reads | Change needed | Invasiveness |
+|---|---|---|---|
+| `dimensions.py` (T2c dimension-domain reader) | `signature.domainTrees`, `tree.domainHead/.order/.usable/.roleUri`, `rel.parent/.member/.order/.usable/.roleUri` (per-arc `roleUri` to place notAll and cross-namespace networks), tree hashing in `_declared_trees` | **None.** All of these keep identical values, order and equality. | None to src |
+| `domains.py` (U10's shared `DomainArcs`/`nest`) | Only what `dimensions.py`/`convert.py` pass it: `(parent, member, order, usable)` | **None.** `nest`'s `visited` guard (its "a cycle ends" comment) stays as harmless defence. | None |
+| `convert.py` (U10's enum2 reader) | `getEEDomainTree()`, `tree.relationships`, `.roleUri`, `.domainHead`, `.usable` | **None.** | None to src |
+| `calculation.py` (T2d/STd reader) | `taxonomy.calculation`, `cg.relationships` (in order), `getItems()`, `rel.order/.weight` | The Tavi output is semantically the same, but **arc order within a network follows the new preorder**, while root order is unchanged (46/46). `_roots`' "no top-level total (a directed cycle)" fallback becomes unreachable: an acyclic set, even after filtering out unweighable or non-reportable arcs, always has a root. Recommend removing it together with its warning, or turning it into an assertion. Update the module docstring: "mireport's flat edge list", and the "only possible with a directed cycle" paragraph. | Small src change, optional in part |
+| `tests/xbrl21_to_tavi/builders.py` | Writes `explicitDimensionDomains`/`ee20Domain` `members` dicts and `calculation` `relationships` dicts | `domain_tree()`, `tree_enumeration()` and `calculation_role()` keep their **edge-list signatures**. They gain a small edges-to-rows serialiser: preorder from the head or roots, first-occurrence expansion, and an assertion that every given edge was emitted, so an unreachable or cyclic fixture fails loudly instead of being silently dropped. `tree_enumeration()`'s flat-value derivation reads the input edges, not `tree["members"]`. | Moderate, contained in one file. The 41 call sites across 5 test files mostly do not change. |
+| `test_convert_dimensions.py` | `test_a_negative_cube_s_domain_in_several_elrs_...` rewrites `tree["members"]` ELRs by hand | Re-express it with the tree-level `targetRole`. | Small |
+| `test_convert_calculation.py` | `_arcs()` asserts arcs in **document order** | Update expected lists where a fixture's arcs are not already in preorder. **Delete** `test_a_directed_cycle_is_rooted_at_its_first_total_warned`: a cycle can no longer be built through `build()`, because the loader guard rejects it. Replace it with a test that the loader raises. | Small to moderate |
+| `test_roundtrip_calculation.py` | `_arcs()` is a `frozenset` | None (order-free). Its real 2.1 fixtures re-bake through Arelle, so they pick up rows automatically. | None |
+| `test_convert_concepts.py`, `test_convert_modules.py`, `test_tavi.py` | Builder calls; `"relationships"` hits there are Tavi-side, not mireport JSON | None beyond what `builders.py` absorbs. | None |
+| `test_convert_module.py`, `test_roundtrip_usable.py` (real baked VSME / Arelle-baked fixtures) | Python API only. Not golden files ("only that a real baked DTS converts"). | None expected. Re-run. | None |
+
+**Honest overall estimate.** mireport: a real but contained change, about one focused item per
+encoding. oim: **zero src change for domain trees**, a small optional src cleanup for calculation,
+and a moderate, mechanical test-builder migration that is *forced*, not optional, because the
+builders write the wire format.
 
 ## 4. Re-bake and regeneration consequences
 
-_Still investigating._
+- **Re-bake all four `src/mireport/data/taxonomies/vsme-*.json` again**, with the same
+  `scripts/update-taxonomy.py` recipe as M7/M9, from `webapp_taxonomies/*.zip`. That is the
+  fourth re-bake this session, after M7, M8 and M9. Acceptance, beyond "it ran":
+  1. The diff touches only `explicitDimensionDomains`, `ee20Domain` and `calculation`.
+  2. Load old and new JSON into `Taxonomy`. Every `DimensionDomainTree`/`EnumerationDomainTree`
+     must compare **equal** (§2.1 predicts identical). Each `CalculationGroup`'s relationships
+     must be **set-equal**, with top-level totals in the same order.
+  3. Each file shrinks by about 0.43–0.50 MB.
+- **Re-confirm both real IFRSAT editions** end to end with the STc recipe (reverse, schema,
+  `validate.mjs`, forward, Arelle). Expectation, derived from the API analysis:
+  - Dimension and enumeration networks in the Tavi output are **byte-identical**.
+  - Summation-item networks are **set-identical, with identical roots, but arcs may be
+    reordered** within a network. Arc order in a Tavi network carries no meaning; each arc's
+    `order` property is unchanged. So a sha256 comparison of the whole file *will* differ, and
+    the check must compare networks as sets.
+  - Same `[WARN]` set and counts.
+  - Arelle-clean forward output, with the same 46/1312 calc arcs.
+- **`other_tavi_taxonomies/` is already pending regeneration.** U10's enum2 fix produced better
+  IFRSAT output and is waiting on the user's copy-in decision (queue, Blocked section). This item
+  **compounds that existing decision rather than creating a new one**. The natural moment for a
+  single regeneration is after the U-items below land, so the deliverable is regenerated once,
+  not twice. If the user copies U10's files in first, this item's calc arc reordering means a
+  second, cosmetic-only regeneration later.
+- M8's oim-side consumption is on hold pending a separate user decision. It is untouched by this
+  plan, but whichever lands second rebases onto the other's re-bake.
 
 ## 5. Recommended sequencing
 
-_Still investigating._
+Nothing below is dispatched. It is for the user's go-ahead.
+
+**Hard coupling.** The oim x2t worktree's `.venv` resolves `mireport` to *this* mireport x2t
+worktree (`.../Digital-Template-to-XBRL-Converter/.claude/worktrees/x2t/src/mireport`), not the
+main checkout. So the moment an M-item below changes mireport source here, oim's test builders go
+red in the oim x2t worktree until the paired U-item lands. Therefore:
+
+- Do not start an M-item while any oim item is running in the oim x2t worktree (U11 currently).
+- Dispatch each U-item immediately after its M-item. This applies unless the user prefers a
+  transitional dual-read (decision 1 below).
+
+| Item | Repo / branch | Scope | Depends on |
+|---|---|---|---|
+| **M11** | mireport, stacked on this branch | Domain-member trees to rows (§2.1): extractor, loaders, shared rows helper and loader guard, tests, **re-bake the 4 VSME JSONs**, and the §4 Taxonomy-equality acceptance check. Python API unchanged. | M10 go-ahead; U11 finished |
+| **U12** | oim | `builders.py` domain/enum serialiser with the all-edges-emitted assertion, plus the `test_convert_dimensions` targetRole test. **No src change** (verify by running the oim suite unchanged apart from tests). Re-run both IFRSAT editions: dimension and enum networks byte-identical. | M11 |
+| **M12** | mireport, stacked on M11 | Calculation to rows (§2.2), cycle detection as a hard `ArelleModelInconsistency` aborting the whole bake, loader cycle guard, `CalculationGroup` docstring (preorder, acyclic), `relationshipsBySource` disposition, new cycle tests, **re-bake the 4 VSME JSONs**, and the §4 set-equality check. | M11 (or in parallel with U12) |
+| **U13** | oim | `builders.calculation_role` serialiser; `test_convert_calculation` order expectations; delete the cycle test and add a loader-raises test; remove or assert `_roots`' cycle fallback; `calculation.py` docstring. Re-run both IFRSAT editions: calc networks set-identical, roots identical. | M12, U12 |
+| then | — | One `other_tavi_taxonomies/` regeneration covering U10 and U12/U13, per the user's pending decision; then RF2-style review and a merge gate like MG3. | U13 |
+
+M11 and M12 could be one item with two commits, halving the re-bakes. They are split here to match
+the M8/M9 granularity and because M11 is a zero-API-change refactor while M12 is not. Each is
+reviewable on its own terms.
+
+**Decisions for the user before dispatch:**
+
+1. **Old-shape JSON in the loader: none** (recommended, §3.1), which forces M/U lockstep. The
+   alternative is a transitional dual-read removed in U13, which decouples the timing.
+2. **One cyclic ELR aborts the whole bake** (recommended, §2.2 step 4). This is the existing
+   `ArelleModelInconsistency` behaviour. No per-ELR partial marker.
+3. **Remove `calculation._roots`' cycle fallback in U13** (recommended; unreachable once the loader
+   rejects cycles), or keep it as defence in depth.
+4. **Two M-items or one** (above).
