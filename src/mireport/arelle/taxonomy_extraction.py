@@ -590,6 +590,31 @@ class TaxonomyInfoExtractor:
             )
         return members
 
+    def getDomainTreeForEnumeration(
+        self,
+        elrUri: str,
+        headUsable: bool,
+        domainHeadConcept: ModelConcept,
+    ) -> dict[str, Any]:
+        """The declared shape of the domain getDomainMembersForEnumeration()
+        flattens: the enum2:domain head, the enum2:linkrole it is declared
+        under, enum2:headUsable, and every domain-member arc beneath the head
+        (see walkDefinitionRelationships()). The same shape as one entry of
+        getDomainTreesForExplicitDimension(), less "order": there is no
+        dimension-domain arc, the head is named by the concept itself.
+
+        Call getDomainMembersForEnumeration() first: this relies on its
+        checks, and adds no diagnostics of its own."""
+        return {
+            "elr": elrUri,
+            "domain": qnameOf(domainHeadConcept),
+            "usable": headUsable,
+            "members": self.getDomainMemberArcs(
+                domainHeadConcept,
+                self.model.conceptRelationshipSet(XbrlConst.domainMember, elrUri),
+            ),
+        }
+
     def extractDimensionDefaults(self) -> None:
         self.cntlr.addToLog("Processing dimension defaults")
         elrsWithDefaults = self.model.linkrolesFor(XbrlConst.dimensionDefault)
@@ -871,13 +896,13 @@ class TaxonomyInfoExtractor:
                             concepts=(qname,),
                         )
                     )
-                jconcept.setdefault("other", {})["ee20DomainMembers"] = (
-                    self.getDomainMembersForEnumeration(
-                        linkrole,
-                        headUsable,
-                        self.model.concept(domainQName),
-                        qname,
-                    )
+                domainHead = self.model.concept(domainQName)
+                other = jconcept.setdefault("other", {})
+                other["ee20DomainMembers"] = self.getDomainMembersForEnumeration(
+                    linkrole, headUsable, domainHead, qname
+                )
+                other["ee20Domain"] = self.getDomainTreeForEnumeration(
+                    linkrole, headUsable, domainHead
                 )
             if concept.isTypedDimension:
                 typedElement = self.model.typedDomainElementOf(concept)

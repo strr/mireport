@@ -1785,6 +1785,188 @@ class TestExtractDimensionDefinitionsDomainTrees:
         assert tree.members == taxonomy.getDomainMembersForExplicitDimension(axis)
 
 
+class TestEnumerationDomainTree:
+    """extractConceptsAndMetadata() writes each enum2 concept's declared domain
+    (enum2:domain head, enum2:linkrole, enum2:headUsable and the domain-member
+    tree) under "other"."ee20Domain", alongside -- and without changing -- the
+    flat usable "ee20DomainMembers" list."""
+
+    ELR = "https://example.com/enum-elr"
+    TARGET_ELR = "https://example.com/enum-target-elr"
+
+    def setup_method(self) -> None:
+        self.concepts = {
+            n: StubConcept(qn(n))
+            for n in ("Domain", "Europe", "France", "Germany", "Asia")
+        }
+        self.enumConcept = StubConcept(
+            qn("Choice"),
+            isEnumeration2Item=True,
+            enumLinkrole=self.ELR,
+            enumDomainQname=qn("Domain"),
+        )
+        # Arelle's ModelConcept attributes the enum branch reads that the
+        # shared StubConcept does not carry.
+        self.enumConcept.isEnumeration = True  # type: ignore[attr-defined]
+        self.enumConcept.isEnumDomainUsable = False  # type: ignore[attr-defined]
+        self.enumConcept.isTypedDimension = False  # type: ignore[attr-defined]
+        self.enumConcept.periodType = "duration"  # type: ignore[attr-defined]
+
+    def relSets(self) -> dict[Any, Any]:
+        c = self.concepts
+
+        def dm(target: StubConcept, **kwargs: Any) -> ConceptRelationship:
+            return conceptRel(target, consecutiveLinkrole=self.ELR, **kwargs)
+
+        # Domain (enum2:headUsable="false")
+        #   Europe (0.5, not usable; xbrldt:targetRole TARGET_ELR)
+        #     France (1)
+        #     Germany (2)
+        #   Asia (3)
+        target = StubLinkroleRelSet(
+            self.TARGET_ELR,
+            {
+                id(c["Europe"]): [
+                    conceptRel(
+                        c["France"], order=1.0, consecutiveLinkrole=self.TARGET_ELR
+                    ),
+                    conceptRel(
+                        c["Germany"], order=2.0, consecutiveLinkrole=self.TARGET_ELR
+                    ),
+                ]
+            },
+        )
+        main = StubLinkroleRelSet(
+            self.ELR,
+            {
+                id(c["Domain"]): [
+                    conceptRel(
+                        c["Europe"],
+                        order=0.5,
+                        isUsable=False,
+                        consecutiveLinkrole=self.TARGET_ELR,
+                    ),
+                    dm(c["Asia"], order=3.0),
+                ],
+            },
+            others={self.TARGET_ELR: target},
+        )
+        return {(XbrlConst.domainMember, self.ELR): main}
+
+    def makeExtractor(self) -> tuple[TaxonomyInfoExtractor, str]:
+        items = [(qn("Choice"), self.enumConcept)] + [
+            (concept.qname, concept) for concept in self.concepts.values()
+        ]
+        extractor, token = makeExtractor(
+            {},
+            self.relSets(),
+            linkrolesByArcrole={XbrlConst.domainMember: [self.ELR]},
+            items=items,
+        )
+        return extractor, token
+
+    def extractConcepts(self) -> tuple[TaxonomyInfoExtractor, dict[str, Any]]:
+        extractor, token = self.makeExtractor()
+        extractor.model.typeQNamesOf = lambda concept: (  # type: ignore[method-assign]
+            QName("enum2", "http://xbrl.org/2020/extensible-enumerations-2.0", "x"),
+            QName("xbrli", "http://www.xbrl.org/2003/instance", "tokenItemType"),
+        )
+        extractor.addConceptMetadata = lambda concept, jconcept: None  # type: ignore[method-assign]
+        extractor.addLabels = lambda concept, jconcept: None  # type: ignore[method-assign]
+        extractor.collectReferences = lambda concept: None  # type: ignore[method-assign]
+        extractor.taxonomyJson["concepts"] = {}
+        extractor.model._items = [(qn("Choice"), self.enumConcept)]  # type: ignore[attr-defined]
+        extractor.extractConceptsAndMetadata()
+        assert collectedDiagnostics(token) == []
+        return extractor, extractor.taxonomyJson["concepts"][qn("Choice")]["other"]
+
+    def arc(
+        self, parent: str, member: str, order: float, usable: bool = True, **kw: str
+    ) -> dict[str, Any]:
+        return {
+            "elr": kw.get("elr", self.ELR),
+            "parent": qn(parent),
+            "member": qn(member),
+            "order": order,
+            "usable": usable,
+        }
+
+    def test_tree_keeps_head_linkrole_nesting_and_arc_order(self) -> None:
+        extractor, token = self.makeExtractor()
+        tree = extractor.getDomainTreeForEnumeration(
+            self.ELR, False, cast(ModelConcept, self.concepts["Domain"])
+        )
+        assert collectedDiagnostics(token) == []
+        assert tree == {
+            "elr": self.ELR,
+            "domain": qn("Domain"),
+            "usable": False,
+            "members": [
+                self.arc("Domain", "Europe", 0.5, False),
+                self.arc("Europe", "France", 1.0, elr=self.TARGET_ELR),
+                self.arc("Europe", "Germany", 2.0, elr=self.TARGET_ELR),
+                self.arc("Domain", "Asia", 3.0),
+            ],
+        }
+
+    def test_concept_gains_the_tree_and_keeps_the_flat_list(self) -> None:
+        _, other = self.extractConcepts()
+        assert set(other) == {"ee20DomainMembers", "ee20Domain"}
+        assert other["ee20DomainMembers"] == [qn("France"), qn("Germany"), qn("Asia")]
+        assert other["ee20Domain"]["domain"] == qn("Domain")
+        assert other["ee20Domain"]["elr"] == self.ELR
+        assert other["ee20Domain"]["usable"] is False
+
+    def test_tree_survives_into_json_and_loads_back(self, tmp_path: Path) -> None:
+        # The writer/reader contract: what the extractor bakes is exactly
+        # what Taxonomy.fromJSON() reads back into EnumerationDomainTree.
+        extractor, other = self.extractConcepts()
+        conv = extractor.qnameConverter.convertRecursive
+        names = ("Choice", *self.concepts)
+        conceptKeys = conv([qn(n) for n in names])
+        byName = dict(zip(names, conceptKeys, strict=True))
+        bits = {
+            "entryPoint": "test://extracted-enumeration-domain",
+            "namespaces": extractor.qnameConverter.getNamespacePrefixMap(),
+            "presentation": {},
+            "dimensions": {},
+            "concepts": {
+                key: {
+                    "labels": {},
+                    "dataType": "xbrli:stringItemType",
+                    "baseDataType": "xbrli:stringItemType",
+                    "periodType": "duration",
+                    **({"other": conv(other)} if name == "Choice" else {}),
+                }
+                for name, key in byName.items()
+            },
+        }
+        path = tmp_path / "taxonomy.json"
+        writeDataFile(cast(Cntlr, StubCntlr()), path, "taxonomy", bits)
+        taxonomy = Taxonomy.fromJSON(json.loads(path.read_text()))
+
+        def c(name: str) -> Concept:
+            return taxonomy.getConcept(byName[name])
+
+        choice = c("Choice")
+        assert choice.getEEDomainHead() == c("Domain")
+        tree = choice.getEEDomainTree()
+        assert tree is not None
+        assert tree.enumeration == choice
+        assert tree.roleUri == self.ELR
+        assert tree.usable is False
+        assert [
+            (r.roleUri, r.parent, r.member, r.order, r.usable)
+            for r in tree.relationships
+        ] == [
+            (self.ELR, c("Domain"), c("Europe"), 0.5, False),
+            (self.TARGET_ELR, c("Europe"), c("France"), 1.0, True),
+            (self.TARGET_ELR, c("Europe"), c("Germany"), 2.0, True),
+            (self.ELR, c("Domain"), c("Asia"), 3.0, True),
+        ]
+        assert tree.members == frozenset(choice.getEEDomain())
+
+
 class StubCalculationRelSet:
     """Serves canned (source, relationships) groups, like the real
     ConceptRelationshipSet.relationshipsBySource()."""
