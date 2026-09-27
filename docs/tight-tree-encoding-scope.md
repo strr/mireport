@@ -91,7 +91,195 @@ real-data hits, which U1 had already noted; it is covered by the `xbrl21_to_tavi
 
 ## 2. Proposed encoding
 
-_Still investigating._
+Principle: **change the wire format only; keep the `Taxonomy`/`Concept` Python API identical**
+(same dataclasses, same fields, same values) wherever that is achievable, and state exactly where
+it is not (§2.2, relationship order in `CalculationGroup`). Rows are JSON arrays with
+presentation's trailing-field elision: optional trailing fields are left out when they carry
+their default, and a later field that must be present forces the earlier ones to be written.
+
+### 2.1 Domain-member trees (`explicitDimensionDomains[dim][i]` and `other.ee20Domain`)
+
+Today, one dict per arc:
+
+```json
+{"elr": E, "domain": H, "order": 1.0, "usable": true,
+ "members": [{"elr": E2, "parent": H, "member": M, "order": 1.0, "usable": true}, ...]}
+```
+
+Proposed:
+
+```json
+{"elr": E, "domain": H, "order": 1.0, "usable": true,
+ "targetRole": E2,
+ "rows": [[1, M, 1.0], [2, M2, 1.0, false], [2, M3, 2.0, true, E3], ...]}
+```
+
+- `elr`, `domain`, `order` (dimension trees only) and `usable` are unchanged.
+- `targetRole`: new tree-level field, **written only when set**. It is the dimension-domain arc's
+  `xbrldt:targetRole`, i.e. the ELR of the head's own domain-member arcs when that differs from
+  `elr`. Never present on an `ee20Domain`: there is no dimension-domain arc, and the head's arcs are
+  in `enum2:linkrole` = `elr` by definition.
+- `rows`: `[indent, member, order(, usable(, targetRole))]` in the extractor's existing walk order
+  (depth-first, siblings in arc order). Indent 1 is a child of `domain`. The head itself gets no
+  row because it is already `domain`, which matches `walkDefinitionChildren`'s indent-1 convention.
+  - `order`: **always written.** Unlike presentation, the oim consumers use the value. `domains.
+    DomainArcs`/`nest` merge the arcs of *several* trees into one network and interleave siblings
+    by real arc order. `calculation.py` copies it onto the Tavi relationship. A position-derived
+    substitute would change interleaving, not just bytes.
+  - `usable`: written only when `false` (or when a `targetRole` follows it).
+  - `targetRole`: written only when **this row's arc** carries an `xbrldt:targetRole` that moves
+    its children into another ELR.
+
+Extraction-side NamedTuple, replacing `DefinitionRelationship`:
+
+```python
+class DomainMemberRow(NamedTuple):
+    indent: int
+    qname: QName
+    order: float
+    usable: bool
+    targetRole: str | None  # rel.consecutiveLinkrole if != relSet.linkrole, else None
+```
+
+`walkDefinitionRelationships` keeps its body and its `(elr, parent, member)` `_seen` key. It gains
+an `indent` parameter (like `walkPresentationChildren`) and yields `DomainMemberRow`s instead.
+`getDomainMemberArcs` serialises them with trailing elision.
+
+**Constraint (1): the per-arc ELR is preserved exactly.** The encoding puts a `targetRole` on
+the arc that *causes* an ELR change, rather than an ELR on every arc that *results* from one. The
+loader rebuilds each relationship's `roleUri` with an indent stack of `(qname, elr-of-its-
+children)`:
+
+- The head's entry is `targetRole or elr`.
+- A row's own arc is in its parent entry's ELR.
+- The row pushes `(qname, row.targetRole or thatElr)`.
+
+This is exactly the ELR `walkDefinitionRelationships` records today: `relSet.linkrole` of the set
+reached through `consecutiveSet(rel)`. It is written once per crossing, not once per arc beneath
+one, which is why this shape was chosen over the `elr_if_changed`-per-row alternative in the brief.
+Real data is the reason. VSME's only crossing (§1.1) moves 973 arcs, 20 of them direct children of
+the head, and would cost 20 row annotations under per-row-ELR but costs one tree-level field here.
+A per-row `elr_if_changed` is also subtly lossy under DAG de-dup: if every child of a re-reached
+member is suppressed, the crossing arc has no child row left to carry the ELR. Recording the
+`targetRole` on the arc itself keeps it even then. (Today's per-arc `elr` has the same blind spot,
+so this is strictly no worse.)
+
+**Constraint (2): usable and DAG de-dup are preserved exactly.** Rows are emitted in exactly the
+order `walkDefinitionRelationships` yields arcs today. Each yielded arc is followed immediately by
+its target's recursion, so each row's parent is recoverable: it is the nearest preceding row one
+indent shallower, or `domain` at indent 1. The rows are therefore a lossless re-spelling of
+today's `members` list. A member reached through a second parent in the same ELR gets its own row
+(one relationship per parent, as today), but no child rows under it, because the walk's `_seen`
+key suppresses them exactly as it does now. **The loader must not re-expand it**, and does not
+need to: it only rebuilds edges, and `getChildren(member)` already filters by parent concept
+across the whole tree, so it returns the children listed at the first occurrence. Nothing is
+duplicated, and nothing a consumer can observe is lost.
+
+Verified, not argued: converting all 19 real trees in each VSME edition from today's JSON to rows
+and back rebuilds `members` **identical and in order, 19/19 × 4 editions**, the `TypeOfWasteAxis`
+crossing included (scratch script, §1 method). Tree JSON shrinks to **32%** of today's size, about
+0.43–0.50 MB off each 2.4–3.2 MB baked VSME file. The IFRSAT multi-parent case (9–14 members per
+DTS) and the per-row `targetRole` case have no real VSME instance. The existing stub tests in
+`tests/unitTests/arelle/test_taxonomy_extraction.py` (`TestWalkDefinitionRelationships`, and the
+enum2 fixture whose `Europe` arc carries `targetRole TARGET_ELR`) are where the implementing item
+proves them.
+
+Python API: `DimensionDomainTree`, `EnumerationDomainTree` and `DomainMemberRelationship` are
+**unchanged**, with the same fields, values and relationship order, so equality and hashing are
+unchanged too. oim's `dimensions._declared_trees` dedupes equal trees by hashing them. Only
+`Taxonomy._domainTreeFromJSON` and `Concept._eeDomainTreeFromJSON` change, sharing one new
+rows-to-relationships helper.
+
+### 2.2 Calculation (`calculation[elr]`)
+
+Today: `{"relationships": [{"source", "target", "weight", "order"}, ...]}`, from
+`relationshipsBySource()`. Proposed:
+
+```json
+{"rows": [[0, Total], [1, Item, 1.0, 1.0], [1, SubTotal, -1.0, 2.0], [2, Item2, 1.0, 1.0], ...]}
+```
+
+- Root rows are `[0, qname]`, one per `relSet.rootConcepts()` in that order, exactly as
+  `extractPresentation` does. Multiple roots and a concept that is both total and item need
+  nothing special (settled; §1 shows both are routine).
+- Item rows are `[indent, qname, weight, order]`, **both always written**. `weight` is
+  load-bearing: Tavi admits only ±1, and `calculation._warn_unweighable_totals` must see any other
+  value. `order`: same reason as §2.1. Eliding `weight == 1.0` would save little on a section that
+  is already small (VSME: 7 ELRs, 31 arcs) and would make a root row and an item row differ only
+  by indent, so it is not proposed.
+- Shared subtrees use the §2.1 rule: a total's items are listed under its first occurrence in the
+  ELR only. Real data never has a shared calc *total* (§1), so this is specified for completeness.
+  It is not a real-data concern.
+
+```python
+class CalculationRow(NamedTuple):
+    indent: int
+    qname: QName
+    weight: float | None  # None only on indent-0 root rows
+    order: float | None
+```
+
+**Cycle detection: where, what, and what it aborts.**
+
+1. *Where*: in a new `walkCalculationChildren(concept, relSet, indent, path, expanded)`, called
+   from `extractCalculation` once per root. It is ordinary DFS. `path` is the current ancestor
+   chain and `expanded` holds the concepts whose items have already been listed. For each arc from
+   `concept`, the check `rel.target in path` (self-loops included) runs **before** the
+   already-expanded skip. That order makes it complete: in DFS, a back edge to a node still on the
+   stack is exactly a directed cycle, and skipping fully-explored nodes cannot hide one.
+2. *The rootless case*: a strongly connected component that no root reaches, e.g. an ELR holding
+   only `A→B→A`, has no root and would never be walked. So after the roots, `extractCalculation`
+   compares the item rows emitted against `len(relSet)` arcs. If any are missing, it walks each
+   not-yet-expanded source with the same function, purely to locate the back edge for the
+   message. A finite acyclic graph is fully reachable from its roots, so a shortfall **is** a cycle.
+   The §1 simulation confirmed the converse on every real ELR: no shortfall anywhere.
+3. *What fires*: `raise ArelleModelInconsistency(ArelleDiagnostic.error("Summation-item
+   relationships form a directed cycle", elr=elrUri, concepts=(A, B, ..., A)))`, with the cycle's
+   concepts in path order. This is the existing hard-fail precedent (`_summationWeight`,
+   `extractConceptsAndMetadata`'s enum2 check, `getDimensions`), and `extractConceptsAndMetadata`
+   is the closest analogue. It is not a `diagnostics.emit(... warning ...)`.
+4. *Scope: the whole DTS, not one ELR.* An exception from `extract()` propagates before
+   `runTaxonomyInfo` reaches `writeDataFile`, so **no JSON is written for that taxonomy at all**.
+   This is how every existing `ArelleModelInconsistency` already behaves, and
+   `xbrl21_to_tavi.load` already turns it into a `TaxonomyLoadError`. The plan deliberately does
+   **not** skip the ELR or mark it partial:
+   - A "this ELR was cyclic" marker is a structural accommodation of the defect, which the
+     maintainer rejected. It would also need a new JSON field that every consumer then handles.
+   - Silently dropping the ELR is the "silence is not success" anti-pattern.
+   - With zero real-data hits (§1), the cost of the stricter choice is nil.
+
+   The error names the first cyclic ELR found. Reporting all of them at once is a cheap optional
+   refinement (collect, then raise once with the rest as an extra `otherElrs=` field). It is not
+   needed for correctness.
+5. `arcsByArcrole` counting moves off the per-source loop onto a plain iteration over the ELR's
+   relationships, so the mixed-arcrole warning is unchanged. In a mixed DTS, an arc declared under
+   both arcroles in one ELR is still two relationships: the second becomes a second row with no
+   child rows, the same as today's two edges.
+
+**Loader-side guard.** Unlike an edge list, rows *can* literally spell a cycle: a row whose QName
+equals an ancestor on the indent stack. `Taxonomy._calculationGroupFromJSON` should reject that
+with a `TaxonomyException` naming the ELR and concept. This is cheap: check each row against the
+stack it already keeps. It means hand-built JSON cannot reintroduce what the extractor forbids.
+The same guard applies to domain trees, which XDT already forbids from cycling.
+
+**Python API: one real, bounded change.** `CalculationGroup`, `CalculationRelationship`,
+`getItems()` and `totals` keep their shapes and values. The **order of
+`CalculationGroup.relationships` changes**: preorder from each root, as `DimensionDomainTree`'s
+already is, instead of "grouped by source, sources in first-arc document order". Measured on both
+IFRSAT editions, the orders agree in only 16/46 ELRs. Regrouping rows by source in the loader still
+agrees in just 43/46, so no loader-side trick recovers today's order without writing extra
+information. The order is recorded nowhere in the XBRL, it is an artefact of `fromModelObjects()`
+dict order, so it is not worth preserving. What consumers depend on is unaffected:
+
+- `getItems()` filters by source, so the arc order within a total is the same.
+- The top-level totals are in the **same order in 46/46 IFRSAT ELRs**. Those totals are what
+  `xbrl21_to_tavi.calculation._roots` numbers as `xbrl:rootSource` 1, 2, ...
+
+The `CalculationGroup` docstring changes from "deliberately not a tree ... summation-item allows
+cycles" to preorder plus "acyclic, enforced at extraction and load". Round-trip on real VSME
+calc: 7/7 ELRs per edition lossless as a set of `(source, target, weight, order)`, 6/7 in the same
+order. The calc JSON shrinks to 68%, trivial in absolute terms: the real benefit is one shape
+everywhere, not bytes.
 
 ## 3. Consumer inventory
 
