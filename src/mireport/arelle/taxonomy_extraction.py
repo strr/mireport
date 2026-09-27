@@ -448,23 +448,35 @@ class TaxonomyInfoExtractor:
                 "domain": rel.targetQName,
                 "order": rel.order,
                 "usable": rel.isUsable,
-                "members": [
-                    {
-                        "elr": arc.elr,
-                        "parent": arc.parent,
-                        "member": arc.member,
-                        "order": arc.order,
-                        "usable": arc.isUsable,
-                    }
-                    for arc in self.walkDefinitionRelationships(
-                        rel.target,
-                        self.model.conceptRelationshipSet(
-                            XbrlConst.domainMember, rel.consecutiveLinkrole
-                        ),
-                    )
-                ],
+                "members": self.getDomainMemberArcs(
+                    rel.target,
+                    self.model.conceptRelationshipSet(
+                        XbrlConst.domainMember, rel.consecutiveLinkrole
+                    ),
+                ),
             }
             for rel in dimensionDomainRelSet.relationshipsFrom(explicitDimension)
+        ]
+
+    def getDomainMemberArcs(
+        self,
+        domainHeadConcept: ModelConcept,
+        domainMemberRelSet: ConceptRelationshipSet,
+    ) -> list[dict[str, Any]]:
+        """The "members" list of a baked domain tree: every domain-member arc
+        beneath `domainHeadConcept`, as walkDefinitionRelationships() yields
+        them."""
+        return [
+            {
+                "elr": arc.elr,
+                "parent": arc.parent,
+                "member": arc.member,
+                "order": arc.order,
+                "usable": arc.isUsable,
+            }
+            for arc in self.walkDefinitionRelationships(
+                domainHeadConcept, domainMemberRelSet
+            )
         ]
 
     def verifyDomainMemberTree(
