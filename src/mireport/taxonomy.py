@@ -716,6 +716,52 @@ class Reference:
         return hash((self.role, self.parts))
 
 
+class ReferenceRole(NamedTuple):
+    """The roleType a taxonomy declares for a role its references use: its
+    definition and generic labels, exactly as a PresentationGroup carries them
+    for its own ELR (and extracted the same way). Only roles with a declared
+    roleType have one -- XBRL 2.1's predefined reference roles need none -- so
+    see Taxonomy.getReferenceRole(), which returns None for those. This is
+    metadata about a role, not a container of references: Reference.role is
+    the key, and Taxonomy.references holds the references themselves."""
+
+    taxonomy: Taxonomy
+    roleUri: str
+    definition: str | None
+    labels: Mapping[str, str]
+
+    def getLabel(
+        self,
+        requestedLanguage: str | None = None,
+        *,
+        fallbackToDefaultLanguage: bool = True,
+        fallbackToDefinition: bool = True,
+    ) -> str | None:
+        """As PresentationGroup.getLabel(), except that there may be no
+        definition to fall back to, hence None rather than ""."""
+        if requestedLanguage and (label := self.labels.get(requestedLanguage)):
+            return label
+        if (
+            fallbackToDefaultLanguage
+            and (default := self.taxonomy.defaultLanguage)
+            and (label := self.labels.get(default))
+        ):
+            return label
+        if fallbackToDefinition:
+            return self.definition
+        return None
+
+    @classmethod
+    def fromJSON(cls, taxonomy: Taxonomy, roleUri: str, metaData: Mapping) -> Self:
+        definition = metaData.get("definition")
+        return cls(
+            taxonomy,
+            roleUri,
+            None if definition is None else str(definition).strip(),
+            metaData.get("labels", {}),
+        )
+
+
 class Relationship(NamedTuple):
     roleUri: str
     depth: int
@@ -1109,6 +1155,7 @@ class Taxonomy:
         references: Iterable[Mapping] | None = None,
         calculation: Mapping[str, Mapping[str, Any]] | None = None,
         calculationArcrole: str | None = None,
+        referenceRoles: Mapping[str, Mapping[str, Any]] | None = None,
     ) -> None:
         # presentation, dimensions and calculation are only ever read, never
         # modified, so the same parsed JSON can back any number of Taxonomy
@@ -1149,6 +1196,10 @@ class Taxonomy:
                 sorted(refs, key=lambda r: (r.getOrder(concept), r.role, r.parts))
             )
             for concept, refs in referencesByConcept.items()
+        }
+        self._referenceRoles: Mapping[str, ReferenceRole] = {
+            roleUri: ReferenceRole.fromJSON(self, roleUri, bits)
+            for roleUri, bits in (referenceRoles or {}).items()
         }
 
         self._groups: tuple[PresentationGroup, ...] = tuple(
@@ -1429,6 +1480,10 @@ class Taxonomy:
             # baked before calculations were extracted.
             calculation=bits.get("calculation"),
             calculationArcrole=bits.get("calculationArcrole"),
+            # Absent when no reference role has a declared roleType (a DTS
+            # citing only XBRL 2.1's predefined roles) and in JSON baked
+            # before reference roles were extracted.
+            referenceRoles=bits.get("referenceRoles"),
         )
 
     def _calculationArcroleFromJSON(
@@ -1639,6 +1694,18 @@ class Taxonomy:
         """Every distinct reference in the taxonomy. See
         getReferencesForConcept() to get the ones for one concept."""
         return self._references
+
+    @property
+    def referenceRoles(self) -> Mapping[str, ReferenceRole]:
+        """Role URI -> ReferenceRole, for every role a reference uses that the
+        DTS declares a roleType for. See getReferenceRole()."""
+        return self._referenceRoles
+
+    def getReferenceRole(self, roleUri: str) -> ReferenceRole | None:
+        """The declared roleType (definition, labels) of a role references use,
+        or None if there is none: a predefined XBRL 2.1 role, a role no
+        reference uses, or JSON baked before reference roles were extracted."""
+        return self._referenceRoles.get(roleUri)
 
     @property
     def presentation(self) -> tuple[PresentationGroup, ...]:

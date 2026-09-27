@@ -71,6 +71,7 @@ def _build_taxonomy(
     concepts: dict[str, dict[str, Any]],
     *,
     references: list[dict[str, Any]] | None = None,
+    referenceRoles: dict[str, dict[str, Any]] | None = None,
 ) -> Taxonomy:
     bits: dict[str, Any] = {
         "entryPoint": entry_point,
@@ -88,6 +89,8 @@ def _build_taxonomy(
         # per-concept fold in _createTaxonomyFromJSON(); references=[] means
         # "given, but empty" -- exercises the native, top-level shape.
         bits["references"] = references
+    if referenceRoles is not None:
+        bits["referenceRoles"] = referenceRoles
     return loadTaxonomyJSON(bits)
 
 
@@ -247,3 +250,105 @@ class TestMalformedReference:
                 _BASE_CONCEPTS,
                 references=[{"role": _REFERENCE_ROLE, "concepts": ["vsme:A"]}],
             )
+
+
+_CUSTOM_ROLE = "https://example.com/role/disclosure-framework"
+
+
+class TestReferenceRoles:
+    """Taxonomy.referenceRoles / getReferenceRole(): the "referenceRoles"
+    section's definition and labels for a role references use, the same
+    fields a PresentationGroup carries for its ELR."""
+
+    def _taxonomy(
+        self, entry_point: str, referenceRoles: dict[str, dict[str, Any]] | None
+    ) -> Taxonomy:
+        return _build_taxonomy(
+            entry_point,
+            _BASE_CONCEPTS,
+            references=[
+                _reference(role=_CUSTOM_ROLE, concepts=["vsme:A"]),
+                _reference(concepts=["vsme:B"]),
+            ],
+            referenceRoles=referenceRoles,
+        )
+
+    def test_definition_and_labels(self) -> None:
+        taxonomy = self._taxonomy(
+            "test://refs/roles",
+            {
+                _CUSTOM_ROLE: {
+                    "definition": "Disclosure Framework Reference",
+                    "labels": {"en": "Disclosure framework", "fr": "Cadre"},
+                }
+            },
+        )
+        role = taxonomy.getReferenceRole(_CUSTOM_ROLE)
+        assert role is not None
+        assert role.roleUri == _CUSTOM_ROLE
+        assert role.definition == "Disclosure Framework Reference"
+        assert role.labels == {"en": "Disclosure framework", "fr": "Cadre"}
+        assert role.getLabel("fr") == "Cadre"
+        assert list(taxonomy.referenceRoles) == [_CUSTOM_ROLE]
+
+    def test_keyed_by_a_references_own_role(self) -> None:
+        taxonomy = self._taxonomy(
+            "test://refs/roles-by-ref", {_CUSTOM_ROLE: {"definition": "DF"}}
+        )
+        [ref] = taxonomy.getConcept("vsme:A").references
+        role = taxonomy.getReferenceRole(ref.role)
+        assert role is not None and role.definition == "DF"
+        [predefined] = taxonomy.getConcept("vsme:B").references
+        assert taxonomy.getReferenceRole(predefined.role) is None
+
+    def test_absent_section_means_no_reference_roles(self) -> None:
+        taxonomy = self._taxonomy("test://refs/roles-absent", None)
+        assert taxonomy.referenceRoles == {}
+        assert taxonomy.getReferenceRole(_CUSTOM_ROLE) is None
+        # The flat reference API is unaffected either way.
+        assert len(taxonomy.references) == 2
+
+    def test_role_with_no_definition(self) -> None:
+        taxonomy = self._taxonomy("test://refs/roles-nodef", {_CUSTOM_ROLE: {}})
+        role = taxonomy.getReferenceRole(_CUSTOM_ROLE)
+        assert role is not None
+        assert role.definition is None
+        assert role.labels == {}
+        assert role.getLabel("en") is None
+
+    def test_definition_is_stripped(self) -> None:
+        taxonomy = self._taxonomy(
+            "test://refs/roles-strip", {_CUSTOM_ROLE: {"definition": "  DF \n"}}
+        )
+        role = taxonomy.getReferenceRole(_CUSTOM_ROLE)
+        assert role is not None and role.definition == "DF"
+
+    def test_get_label_falls_back_to_default_language_then_definition(self) -> None:
+        # The taxonomy's default language is its concepts' most used one: "en".
+        taxonomy = self._taxonomy(
+            "test://refs/roles-fallback",
+            {_CUSTOM_ROLE: {"definition": "DF", "labels": {"en": "Framework"}}},
+        )
+        role = taxonomy.getReferenceRole(_CUSTOM_ROLE)
+        assert role is not None
+        assert role.getLabel("de") == "Framework"
+        assert role.getLabel("de", fallbackToDefaultLanguage=False) == "DF"
+        assert (
+            role.getLabel(
+                "de", fallbackToDefaultLanguage=False, fallbackToDefinition=False
+            )
+            is None
+        )
+
+    def test_from_json_carries_reference_roles(self) -> None:
+        bits: dict[str, Any] = {
+            "entryPoint": "test://refs/roles-fromjson",
+            "namespaces": {"vsme": _NS, "ref": _REF_NS},
+            "concepts": _BASE_CONCEPTS,
+            "presentation": {},
+            "dimensions": {},
+            "references": [_reference(role=_CUSTOM_ROLE, concepts=["vsme:A"])],
+            "referenceRoles": {_CUSTOM_ROLE: {"definition": "DF"}},
+        }
+        role = Taxonomy.fromJSON(bits).getReferenceRole(_CUSTOM_ROLE)
+        assert role is not None and role.definition == "DF"
