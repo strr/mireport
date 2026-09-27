@@ -770,7 +770,8 @@ class TaxonomyInfoExtractor:
 
     def extractReferences(self) -> None:
         """Write the top-level "references" list from what collectReferences()
-        accumulated while walking the concepts."""
+        accumulated while walking the concepts, and "referenceRoles" for the
+        roles those references use (see extractReferenceRoles())."""
         keyedReferences: list[tuple[tuple[str, tuple[tuple[str, str], ...]], dict]] = []
         for key, entry in self._references.items():
             orders: dict[QName, float] = entry["orders"]
@@ -796,6 +797,34 @@ class TaxonomyInfoExtractor:
 
         keyedReferences.sort(key=lambda kv: kv[0])
         self.taxonomyJson["references"] = [jref for _, jref in keyedReferences]
+        self.extractReferenceRoles()
+
+    def extractReferenceRoles(self) -> None:
+        """Write the top-level "referenceRoles" object: for each distinct role
+        used by an extracted reference that the DTS declares a roleType for,
+        that roleType's definition and generic labels -- the same two things
+        extractPresentation() records for each presentation ELR, the same way,
+        and in the same shape ({"definition": ..., "labels": {lang: ...}},
+        "labels" only when there are any). A role with no roleType (XBRL 2.1's
+        predefined reference roles need none) has no entry; a roleType with no
+        link:definition has no "definition". Omitted entirely when no role has
+        an entry, so a DTS citing only predefined roles bakes as before.
+
+        Only roles that references actually use are looked at: this is not a
+        listing of every roleType in the DTS."""
+        roles = sorted({entry["role"] for entry in self._references.values()})
+        referenceRoles: dict[str, dict[str, Any]] = {}
+        for role in roles:
+            if (roleType := self.model.declaredRoleType(role)) is None:
+                continue
+            jrole: dict[str, Any] = {}
+            if (definition := roleType.definition) is not None:
+                jrole["definition"] = definition
+            if labels := self.getLabelsForRoleType(roleType):
+                jrole["labels"] = labels
+            referenceRoles[role] = jrole
+        if referenceRoles:
+            self.taxonomyJson["referenceRoles"] = referenceRoles
 
     def extractConceptsAndMetadata(self) -> None:
         self.cntlr.addToLog(

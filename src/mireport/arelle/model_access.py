@@ -450,3 +450,13 @@ class ValidatedModel:
                 )
             )
         return matching[0]
+
+    def declaredRoleType(self, roleUri: str) -> ModelRoleType | None:
+        """The roleType the DTS declares for roleUri, or None if it declares
+        none -- the normal case for a role XBRL 2.1 itself predefines (e.g.
+        http://www.xbrl.org/2003/role/reference), which needs no roleType.
+        Unlike roleType(), which every extended link role must have, a missing
+        declaration is not an inconsistency here; more than one still is."""
+        if not self._modelXbrl.roleTypes.get(roleUri):
+            return None
+        return self.roleType(roleUri)

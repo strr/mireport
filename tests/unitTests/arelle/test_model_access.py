@@ -592,6 +592,25 @@ class TestValidatedModel:
         with pytest.raises(ArelleModelInconsistency):
             model.roleType(roleUri)
 
+    def test_declared_role_type_returns_single_match(self) -> None:
+        roleUri = "https://example.com/role"
+        roleType = object()
+        model = makeModel(StubModelXbrl(roleTypes={roleUri: [roleType]}))
+        assert model.declaredRoleType(roleUri) is cast(ModelRoleType, roleType)
+
+    @pytest.mark.parametrize("roleTypes", [{}, {"https://example.com/role": []}])
+    def test_declared_role_type_is_none_when_undeclared(
+        self, roleTypes: dict[str, list[Any]]
+    ) -> None:
+        model = makeModel(StubModelXbrl(roleTypes=roleTypes))
+        assert model.declaredRoleType("https://example.com/role") is None
+
+    def test_declared_role_type_raises_on_two(self) -> None:
+        roleUri = "https://example.com/role"
+        model = makeModel(StubModelXbrl(roleTypes={roleUri: [object(), object()]}))
+        with pytest.raises(ArelleModelInconsistency):
+            model.declaredRoleType(roleUri)
+
     def test_resource_relationships_from_raises_on_non_resource(self) -> None:
         concept = StubConcept(qn())
         relSet = StubRelSet(

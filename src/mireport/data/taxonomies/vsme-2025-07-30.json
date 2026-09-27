@@ -58503,6 +58503,11 @@
       ]
     }
   },
+  "referenceRoles": {
+    "https://xbrl.org/2022/role/property": {
+      "definition": "Structured information about a component defined in a taxonomy specified as a key-value pair, for properties that are not language-specific."
+    }
+  },
   "references": [
     {
       "concepts": [

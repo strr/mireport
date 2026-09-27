@@ -91,9 +91,13 @@ class StubLabelResource:
 
 
 class StubRoleType:
-    def __init__(self, roleURI: str = "https://example.com/role") -> None:
+    def __init__(
+        self,
+        roleURI: str = "https://example.com/role",
+        definition: str | None = "A role",
+    ) -> None:
         self.roleURI = roleURI
-        self.definition = "A role"
+        self.definition = definition
 
 
 class StubValidatedModel:
@@ -115,6 +119,11 @@ class StubValidatedModel:
         self._items = items or []
         self._conceptsByQName = dict(self._items)
         self._typeQNamesByQName = typeQNamesByQName or {}
+        # roleURI -> StubRoleType, for declaredRoleType(); set per test.
+        self._roleTypes: dict[str, StubRoleType] = {}
+
+    def declaredRoleType(self, roleUri: str) -> StubRoleType | None:
+        return self._roleTypes.get(roleUri)
 
     def resourceRelationshipsFrom(
         self, source: Any, arcrole: str
@@ -459,6 +468,108 @@ class TestReferences:
         extractor, _ = makeExtractor({XbrlConst.conceptReference: []})
         extractor.extractReferences()
         assert extractor.taxonomyJson["references"] == []
+
+
+CUSTOM_ROLE = "https://example.com/role/disclosure-framework"
+
+
+class TestReferenceRoles:
+    """extractReferenceRoles(), reached through extractReferences(): each
+    distinct role a reference uses, if the DTS declares a roleType for it,
+    gets that roleType's definition and generic labels -- as
+    extractPresentation() records them for a presentation ELR."""
+
+    def extract(
+        self,
+        roles: list[str],
+        roleTypes: dict[str, StubRoleType],
+        labelRels: list[ResourceRelationship] | None = None,
+    ) -> tuple[dict[str, Any], list[ArelleDiagnostic]]:
+        extractor, token = makeExtractor(
+            {XbrlConst.conceptReference: [], XbrlConst.elementLabel: labelRels or []}
+        )
+        cast(Any, extractor.model)._roleTypes = roleTypes
+        for i, role in enumerate(roles):
+            resource = StubReferenceResource(role, [refPart("Name", f"N{i}")])
+            TestReferences().collect(extractor, qn(f"C{i}"), [refRel(resource)])
+        extractor.extractReferences()
+        return extractor.taxonomyJson, collectedDiagnostics(token)
+
+    def test_declared_role_gets_definition_and_labels(self) -> None:
+        taxonomyJson, diagnostics = self.extract(
+            [CUSTOM_ROLE],
+            {CUSTOM_ROLE: StubRoleType(CUSTOM_ROLE, "Disclosure Framework")},
+            [
+                labelRel(StubLabelResource(XbrlConst.genStandardLabel, "en", "DF")),
+                labelRel(StubLabelResource(XbrlConst.genStandardLabel, "fr", "CD")),
+            ],
+        )
+        assert taxonomyJson["referenceRoles"] == {
+            CUSTOM_ROLE: {
+                "definition": "Disclosure Framework",
+                "labels": {"en": "DF", "fr": "CD"},
+            }
+        }
+        assert diagnostics == []
+
+    def test_no_labels_key_without_labels(self) -> None:
+        taxonomyJson, _ = self.extract(
+            [CUSTOM_ROLE], {CUSTOM_ROLE: StubRoleType(CUSTOM_ROLE, "Disclosure")}
+        )
+        assert taxonomyJson["referenceRoles"] == {
+            CUSTOM_ROLE: {"definition": "Disclosure"}
+        }
+
+    def test_no_definition_key_without_definition(self) -> None:
+        taxonomyJson, _ = self.extract(
+            [CUSTOM_ROLE], {CUSTOM_ROLE: StubRoleType(CUSTOM_ROLE, None)}
+        )
+        assert taxonomyJson["referenceRoles"] == {CUSTOM_ROLE: {}}
+
+    def test_role_with_no_role_type_has_no_entry(self) -> None:
+        taxonomyJson, _ = self.extract(
+            [REFERENCE_ROLE, CUSTOM_ROLE],
+            {CUSTOM_ROLE: StubRoleType(CUSTOM_ROLE, "Disclosure")},
+        )
+        assert set(taxonomyJson["referenceRoles"]) == {CUSTOM_ROLE}
+
+    def test_only_predefined_roles_omits_the_section(self) -> None:
+        # So a DTS citing only XBRL 2.1's predefined roles (VSME) bakes to
+        # exactly the JSON it did before this section existed.
+        taxonomyJson, _ = self.extract([REFERENCE_ROLE, EXAMPLE_ROLE], {})
+        assert "referenceRoles" not in taxonomyJson
+        assert len(taxonomyJson["references"]) == 2
+
+    def test_role_shared_by_several_references_is_listed_once(self) -> None:
+        taxonomyJson, _ = self.extract(
+            [CUSTOM_ROLE, CUSTOM_ROLE],
+            {CUSTOM_ROLE: StubRoleType(CUSTOM_ROLE, "Disclosure")},
+        )
+        assert len(taxonomyJson["references"]) == 2
+        assert list(taxonomyJson["referenceRoles"]) == [CUSTOM_ROLE]
+
+    def test_role_type_used_by_no_reference_is_not_looked_at(self) -> None:
+        unused = "https://example.com/role/unused"
+        taxonomyJson, _ = self.extract(
+            [CUSTOM_ROLE],
+            {
+                CUSTOM_ROLE: StubRoleType(CUSTOM_ROLE, "Disclosure"),
+                unused: StubRoleType(unused, "Unused"),
+            },
+        )
+        assert list(taxonomyJson["referenceRoles"]) == [CUSTOM_ROLE]
+
+    def test_role_of_a_reference_with_only_empty_parts_is_not_listed(self) -> None:
+        extractor, _ = makeExtractor(
+            {XbrlConst.conceptReference: [], XbrlConst.elementLabel: []}
+        )
+        cast(Any, extractor.model)._roleTypes = {
+            CUSTOM_ROLE: StubRoleType(CUSTOM_ROLE, "Disclosure")
+        }
+        resource = StubReferenceResource(CUSTOM_ROLE, [refPart("Name", "  ")])
+        TestReferences().collect(extractor, qn("A"), [refRel(resource)])
+        extractor.extractReferences()
+        assert "referenceRoles" not in extractor.taxonomyJson
 
 
 class TestExtractTypedDomainWrapperElement:
