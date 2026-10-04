@@ -261,18 +261,38 @@ def test_nothing_handed_to_aoix_is_deprecated() -> None:
         _render(_document(), strict=True)
 
 
-def test_a_fact_in_another_period_says_which_in_a_list() -> None:
-    """A list shows a fact's period when it is not the report's own (this used to call a macro that
-    did not exist)."""
+def test_a_prior_period_fact_sits_beside_the_current_one_in_a_list() -> None:
+    """A concept with a current and a prior fact is one card: the current value, and the prior
+    beside it with its period."""
     doc = _document()
     other = _fact("tp:Total", "99")
     other["dimensions"]["period"] = "2024-01-01T00:00:00/2025-01-01T00:00:00"
     doc["facts"]["prior"] = other
     html = _render(doc)
+    assert sorted(_tagged(html)).count("tp:Total") == 2  # both are in the document
+    cards = [
+        c
+        for c in re.findall(r'<dl class="fact .*?</dl>', html, re.DOTALL)
+        if "tp:Total" in c
+    ]
+    assert len(cards) == 1  # one card for the concept, not one per period
+    (prior,) = re.findall(
+        r'class="fact-comparative"[^>]*>(.*?)</div>', cards[0], re.DOTALL
+    )
+    assert "2024-01-01 &#8211; 2024-12-31" in prior and ">99<" in prior
+    assert "Reporting period" not in cards[0]  # the card is the current period's
+
+
+def test_a_fact_only_in_another_period_says_which_in_a_list() -> None:
+    doc = _document()
+    only_prior = _fact("tp:Total", "77")
+    only_prior["dimensions"]["period"] = "2024-01-01T00:00:00/2025-01-01T00:00:00"
+    del doc["facts"]["f3"]  # the current Total
+    doc["facts"]["prior"] = only_prior
+    html = _render(doc)
     assert re.findall(r"Reporting period: ([^<]*)<", html) == [
         "2024-01-01 &#8211; 2024-12-31"
     ]
-    assert sorted(_tagged(html)).count("tp:Total") == 2
 
 
 @pytest.mark.parametrize(

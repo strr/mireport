@@ -486,6 +486,8 @@ class InlineReport:
             if v is not None:
                 addDict(k, v)
         addDict("Report period", self.defaultPeriod, "render_duration_period")
+        if (prior := self.priorPeriod) is not None:
+            addDict("Prior period", prior, "render_duration_period")
 
         separator = decimal_symbol(self._outputLocale)
         bits.append(
@@ -569,6 +571,7 @@ class InlineReport:
             reportInfo={
                 "entityName": self._entityName,
                 "defaultPeriod": self.defaultPeriod,
+                "priorPeriod": self.priorPeriod,
                 "factCount": self.factCount,
                 "title": self._reportTitle,
                 "subtitle": self._reportSubtitle,
