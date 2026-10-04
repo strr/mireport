@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from mireport.report.disclosure_layout import (
@@ -24,6 +23,7 @@ from mireport.report.layout.headers import (
     table_period,
     table_unit,
 )
+from mireport.report.model import ReportPeriod
 from mireport.report.periods import DurationPeriodHolder, InstantPeriodHolder
 from mireport.taxonomy import (
     Concept,
@@ -52,7 +52,7 @@ def _fact(
     f.concept = concept or MagicMock(spec=Concept)
     f.concept.isNumeric = numeric
     f.unitSymbol = unit
-    f.period = SimpleNamespace(duration=period)
+    f.period = ReportPeriod(f"p{hash(period)}", period)
     f.explicit_dimensions = dict(explicit or {})
     f.typed_dimensions = dict(typed or {})
     f.context_key = context
@@ -719,3 +719,123 @@ class TestDimensionSet:
         items = [(self._rel(x), _fact(typed={dimension: v})) for v in ("10", "9", "2")]
         grid = _builder({}).dimension_set((dimension,), items)
         assert grid.row_labels == ["2", "9", "10"]
+
+
+_CUR = DurationPeriodHolder(date(2025, 1, 1), date(2025, 12, 31))
+_PRI = DurationPeriodHolder(date(2024, 1, 1), date(2024, 12, 31))
+
+
+def _rank(period) -> int:
+    """Current before prior, as a report would say."""
+    return {_CUR: 0, _PRI: 1}.get(period.duration, 2)
+
+
+def _period_builder(facts_by_concept):
+    for concept, facts in facts_by_concept.items():
+        for fact in facts:
+            fact.concept = concept
+    return GridBuilder(lambda c: facts_by_concept.get(c, []), lambda c: c.name, _rank)
+
+
+class TestPeriodAxis:
+    """A column holding facts from more than one period is each column once per period."""
+
+    @staticmethod
+    def _members():
+        dimension = _concept("dim")
+        return dimension, _concept("a"), _concept("b")
+
+    def test_one_period_is_laid_out_as_ever(self):
+        dimension, a, b = self._members()
+        x = _concept("x")
+        facts = {
+            x: [
+                _fact(explicit={dimension: a}, period=_CUR),
+                _fact(explicit={dimension: b}, period=_CUR),
+            ]
+        }
+        grid = _period_builder(facts).explicit_dimension(
+            [x, _concept("y")], dimension, [a, b], None
+        )
+        assert grid.period_axis is False
+        assert list(grid.col_labels) == [a, b]
+
+    def test_each_column_in_its_own_period_is_not_a_period_axis(self):
+        """A baseline and a target column, each in its own year: the period follows the column."""
+        dimension, a, b = self._members()
+        x = _concept("x")
+        facts = {
+            x: [
+                _fact(explicit={dimension: a}, period=_PRI),
+                _fact(explicit={dimension: b}, period=_CUR),
+            ]
+        }
+        grid = _period_builder(facts).explicit_dimension(
+            [x, _concept("y")], dimension, [a, b], None
+        )
+        assert grid.period_axis is False
+        assert list(grid.col_labels) == [a, b]
+
+    def test_current_and_prior_in_one_column_split_every_column_by_period(self):
+        dimension, a, b = self._members()
+        x = _concept("x")
+        cur_a = _fact(explicit={dimension: a}, period=_CUR, value="cur-a")
+        pri_a = _fact(explicit={dimension: a}, period=_PRI, value="pri-a")
+        cur_b = _fact(explicit={dimension: b}, period=_CUR, value="cur-b")
+        grid = _period_builder({x: [pri_a, cur_a, cur_b]}).explicit_dimension(
+            [x, _concept("y")], dimension, [a, b], None
+        )
+        assert grid.period_axis is True
+        # every column once per period, current's before prior's, whatever order the facts came in
+        assert list(grid.col_labels) == [a, b, a, b]
+        assert grid.data == [[cur_a, cur_b, pri_a, None]]
+
+    def test_the_same_cell_in_two_periods_is_not_a_duplicate(self, caplog):
+        dimension, a, _b = self._members()
+        x = _concept("x")
+        facts = {
+            x: [
+                _fact(explicit={dimension: a}, period=_CUR),
+                _fact(explicit={dimension: a}, period=_PRI),
+            ]
+        }
+        with caplog.at_level(logging.WARNING, logger="mireport.report.layout"):
+            _period_builder(facts).explicit_dimension([x], dimension, [a], None)
+        assert not caplog.records
+
+    def test_typed_rows_across_periods(self):
+        dimension = _concept("typed")
+        x, y = _concept("x"), _concept("y")
+        cur = _fact(typed={dimension: "1"}, period=_CUR)
+        pri = _fact(typed={dimension: "1"}, period=_PRI)
+        grid = _period_builder({x: [cur, pri], y: []}).typed_dimension(
+            [x, y], dimension
+        )
+        assert grid.period_axis is True
+        assert grid.row_labels == ["1"]
+        assert grid.data == [[cur, None, pri, None]]
+        assert list(grid.col_labels) == [x, y, x, y]
+
+    def test_dimension_set_across_periods(self):
+        dimension = _concept("d")
+        x = _concept("x")
+        rel = Relationship("role", 1, x)
+        member = _concept("m")
+        cur = _fact(explicit={dimension: member}, period=_CUR)
+        pri = _fact(explicit={dimension: member}, period=_PRI)
+        # one member, one concept: the member is the (one) column, and it is split by period
+        grid = _period_builder({}).dimension_set((dimension,), [(rel, cur), (rel, pri)])
+        assert grid.period_axis is True
+        assert grid.data == [[cur, pri]]
+
+    def test_a_period_the_report_does_not_rank_comes_after_those_it_does(self):
+        dimension, a, _b = self._members()
+        x = _concept("x")
+        other = DurationPeriodHolder(date(2020, 1, 1), date(2020, 12, 31))
+        cur = _fact(explicit={dimension: a}, period=_CUR)
+        old = _fact(explicit={dimension: a}, period=other)
+        pri = _fact(explicit={dimension: a}, period=_PRI)
+        grid = _period_builder({x: [old, pri, cur]}).explicit_dimension(
+            [x], dimension, [a], None
+        )
+        assert grid.data == [[cur, pri, old]]
