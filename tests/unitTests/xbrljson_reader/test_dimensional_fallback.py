@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import re
+import warnings
 from collections.abc import Iterator
 from typing import Any
 
@@ -252,3 +253,10 @@ def test_a_fact_that_appears_nowhere_is_left_out_when_not_strict() -> None:
     doc = copy.deepcopy(_document())
     doc["facts"]["f9"] = _fact("tp:Orphan", "lost")
     assert "tp:Orphan" not in _tagged(_render(doc))
+
+
+def test_nothing_handed_to_aoix_is_deprecated() -> None:
+    """Rendering typed dimensions must not use the deprecated 'typed' keyword."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        _render(_document(), strict=True)
