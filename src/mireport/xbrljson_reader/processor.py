@@ -122,6 +122,7 @@ class XbrlJsonProcessor:
                 f"Available: {sorted(listTaxonomies())}"
             )
         report = InlineReport(getTaxonomy(entryPoint))
+        report.requireAllFactsRendered = self._strict
         report.addSchemaRef(entryPoint)
         return report
 
@@ -303,8 +304,11 @@ class XbrlJsonProcessor:
         asNumber: int | float = (
             int(number) if number == number.to_integral() else float(number)
         )
+        # No decimals means no accuracy was claimed; INF keeps every digit as written.
         places: DecimalPlaces = (
-            "INF" if str(decimals).upper() == "INF" else int(decimals or 0)
+            "INF"
+            if decimals is None or str(decimals).upper() == "INF"
+            else int(decimals)
         )
         if concept.dataType.localName == "percentItemType":
             fb.setPercentageValue(float(number), places, inputIsDecimalForm=True)
