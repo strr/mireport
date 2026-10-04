@@ -11,13 +11,13 @@ from __future__ import annotations
 
 import json
 import logging
-from collections import Counter
 from collections.abc import Mapping
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from dateutil.relativedelta import relativedelta
 from lxml import etree
 from markupsafe import Markup
 
@@ -42,6 +42,15 @@ _CORE_ASPECTS = frozenset({"concept", "entity", "period", "unit", "language"})
 
 class XbrlJsonException(Exception):
     """The document cannot be turned into a report at all."""
+
+
+def _a_year_before(span: tuple[date, date], later: tuple[date, date]) -> bool:
+    """Whether `span` is the year before `later`: both ends a year earlier, to within a day, so
+    that a year ending 28 February follows one ending 29."""
+    return all(
+        abs((moment + relativedelta(years=1) - other).days) <= 1
+        for moment, other in zip(span, later)
+    )
 
 
 class XbrlJsonProcessor:
@@ -145,21 +154,51 @@ class XbrlJsonProcessor:
             )
         self._report.setEntity(self._namespaces[prefix], identifier)
 
-        durations = Counter(
-            text
-            for f in facts.values()
-            if "/" in (text := str(f["dimensions"].get("period")))
+        self._setPeriods(
+            {
+                text
+                for f in facts.values()
+                if "/" in (text := str(f["dimensions"].get("period")))
+            }
         )
-        if not durations:
+
+    def _setPeriods(self, texts: set[str]) -> None:
+        """Declare the report's periods. The current one is the latest to end (not the one with
+        most facts: a prior period can have more), the prior one ends a year before it, and any
+        other is just declared. Names are stable: cur, prior, other1, other2..."""
+        assert self._report is not None
+        if not texts:
             raise XbrlJsonException("The report has no duration period to anchor on.")
-        for n, (text, _) in enumerate(durations.most_common(), start=1):
-            start, end = self._parseDuration(text)
-            name = f"period{n}"
+        spans = {text: self._parseDuration(text) for text in texts}
+
+        def length(text: str) -> int:
+            start, end = spans[text]
+            return (end - start).days
+
+        current = max(spans, key=lambda t: (spans[t][1], length(t)))
+        prior = next(
+            (
+                t
+                for t in sorted(spans, key=lambda t: spans[t][1], reverse=True)
+                if t != current and _a_year_before(spans[t], spans[current])
+            ),
+            None,
+        )
+        others = sorted(
+            (t for t in spans if t not in (current, prior)), key=lambda t: spans[t][1]
+        )
+        for name, text in [
+            ("cur", current),
+            *([("prior", prior)] if prior else []),
+            *((f"other{n}", t) for n, t in enumerate(others, start=1)),
+        ]:
+            start, end = spans[text]
             self._report.addDurationPeriod(name, start, end)
             self._periodNames[text] = name
             self._periodEnds.setdefault(end, name)
-            if n == 1:
-                self._report.setDefaultPeriodName(name)
+        self._report.setDefaultPeriodName("cur")
+        if prior:
+            self._report.setPriorPeriodName("prior")
 
     def _periodName(self, text: str, concept: Concept) -> str:
         """The named period for a fact. An instant is only representable as the end of a
