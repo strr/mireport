@@ -329,13 +329,8 @@ class XbrlJsonProcessor:
             else int(decimals)
         )
         if concept.dataType.localName == "percentItemType":
-            # Shown as a percentage (x100, with ix:scale -2) but stored as given. Not
-            # setPercentageValue(): it takes display decimals and adds 2, and the decimals of an
-            # xBRL-JSON fact are already the XBRL ones, so the report would claim more precision.
-            shown = number * 100
-            fb.setValue(
-                int(shown) if shown == shown.to_integral() else float(shown)
-            ).setScale(-2).setDecimals(places)
+            # A fraction with XBRL decimals, shown x100 with ix:scale -2; see setPercentageFact.
+            fb.setPercentageFact(number, places)
         else:
             fb.setValue(asNumber).setDecimals(places)
 

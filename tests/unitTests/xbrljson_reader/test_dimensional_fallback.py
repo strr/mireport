@@ -226,20 +226,19 @@ def test_a_gap_in_the_grid_is_left_blank() -> None:
 
 
 def test_a_percent_is_shown_scaled_but_stored_as_given() -> None:
-    """percentItemType holds a fraction, so it is displayed x100 with ix:scale -2. The XBRL value
-    and decimals must come out exactly as the source gave them: the reader may not add the 2
-    decimals that mireport's own percentage helper adds for a spreadsheet's display decimals."""
+    """percentItemType holds a fraction: 0.1250 at decimals 4 is 12.50%. The page shows 12.50 and
+    tags it ix:scale -2, so the XBRL value and decimals come out exactly as the source gave them."""
     _load(percent=True)
     doc = _document()
-    doc["facts"] = {"p1": _fact("tp:Share", "0.125")}
-    doc["facts"]["p1"]["decimals"] = 3
+    doc["facts"] = {"p1": _fact("tp:Share", "0.1250")}
+    doc["facts"]["p1"]["decimals"] = 4
     processor = XbrlJsonProcessor(doc, ConversionResultsBuilder(), strict=True)
     html = processor.createReport().getInlineReport().fileContent.decode("utf-8")
     tag = re.search(r"<ix:nonFraction[^>]*name=\"tp:Share\"[^>]*>([^<]*)<", html)
     assert tag, html[-2000:]
     assert 'scale="-2"' in tag.group(0)
-    assert 'decimals="3"' in tag.group(0)  # not 5
-    assert tag.group(1).replace(",", "").startswith("12.5")  # shown as 12.5 %
+    assert 'decimals="4"' in tag.group(0)  # XBRL's decimals, not display's (2) or 6
+    assert tag.group(1) == "12.50"
 
 
 def test_a_fact_that_appears_nowhere_is_an_error_when_strict() -> None:
