@@ -235,6 +235,10 @@ class InlineReport:
             ) from None
 
     @property
+    def hasDefaultPeriod(self) -> bool:
+        return bool(self._defaultPeriodName)
+
+    @property
     def defaultReportPeriod(self) -> ReportPeriod:
         if not (name := self._defaultPeriodName):
             raise InlineReportException("The report has no default period yet.")
