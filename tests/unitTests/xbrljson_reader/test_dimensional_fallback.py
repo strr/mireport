@@ -259,3 +259,17 @@ def test_nothing_handed_to_aoix_is_deprecated() -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)
         _render(_document(), strict=True)
+
+
+def test_a_fact_in_another_period_says_which_in_a_list() -> None:
+    """A list shows a fact's period when it is not the report's own (this used to call a macro that
+    did not exist)."""
+    doc = _document()
+    other = _fact("tp:Total", "99")
+    other["dimensions"]["period"] = "2024-01-01T00:00:00/2025-01-01T00:00:00"
+    doc["facts"]["prior"] = other
+    html = _render(doc)
+    assert re.findall(r"Reporting period: ([^<]*)<", html) == [
+        "2024-01-01 &#8211; 2024-12-31"
+    ]
+    assert sorted(_tagged(html)).count("tp:Total") == 2
