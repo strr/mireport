@@ -255,7 +255,7 @@ class FactCreator:
                         MessageType.Conversion,
                     )
                 else:
-                    fb.setHiddenValue(member.expandedName)
+                    fb.setEnumerationValue(member)
 
             if (presetDimensions := preset_dims.get(stuff)) is not None:
                 for dim, dimValue in presetDimensions.items():
@@ -366,7 +366,7 @@ class FactCreator:
                     ref=stuff,
                 )
             else:
-                fb.setConcept(concept).setHiddenValue("").setValue(
+                fb.setConcept(concept).setEnumerationSet([]).setValue(
                     EE_SET_DESIRED_EMPTY_PLACEHOLDER_VALUE
                 )
                 addFactToReport(self._report, self._msg, fb, stuff)
@@ -378,9 +378,9 @@ class FactCreator:
                 ref=stuff.excelRef(cell),
             )
         else:
-            fb.setConcept(concept).setHiddenValue(
-                " ".join(sorted(e.expandedName for e in eeSetValue))
-            ).setValue("\n".join(value))
+            fb.setConcept(concept).setEnumerationSet(eeSetValue).setValue(
+                "\n".join(value)
+            )
             addFactToReport(self._report, self._msg, fb, stuff)
 
     def _createFootnotes(self) -> None:

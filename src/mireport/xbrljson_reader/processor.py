@@ -25,6 +25,7 @@ from mireport.conversionresults import ConversionResultsBuilder, MessageType, Se
 from mireport.exceptions import InlineReportException
 from mireport.report import InlineReport
 from mireport.report.factbuilder import FactBuilder
+from mireport.report.model import Unit
 from mireport.taxonomy import Concept, QName, Taxonomy, getTaxonomy, listTaxonomies
 from mireport.typealiases import DecimalPlaces
 from mireport.xml import ISO4217_NS, XBRLI_NS
@@ -142,8 +143,7 @@ class XbrlJsonProcessor:
             raise XbrlJsonException(
                 f"Entity {next(iter(entities))!r} has no declared scheme prefix."
             )
-        self._report.setDefaultAspect("entity-identifier", identifier)
-        self._report.setDefaultAspect("entity-scheme", self._namespaces[prefix])
+        self._report.setEntity(self._namespaces[prefix], identifier)
 
         durations = Counter(
             text
@@ -191,9 +191,7 @@ class XbrlJsonProcessor:
                 ):
                     name = fact["value"]
                     break
-        self._report.setEntityName(
-            name or self._report.defaultAspects["entity-identifier"]
-        )
+        self._report.setEntityName(name or self._report.entityIdentifier or "")
 
     def _setDefaultCurrency(self, facts: Mapping[str, Any]) -> None:
         """If the facts use exactly one currency, make it the report currency."""
@@ -206,7 +204,7 @@ class XbrlJsonProcessor:
             and self._namespaces.get(unit.partition(":")[0]) == ISO4217_NS
         }
         if len(currencies) == 1:
-            self._report.setDefaultAspect("monetary-units", next(iter(currencies)))
+            self._report.setDefaultCurrency(next(iter(currencies)))
 
     @staticmethod
     def _parseDuration(text: str | None) -> tuple[date, date]:
@@ -277,14 +275,12 @@ class XbrlJsonProcessor:
     ) -> None:
         if concept.isEnumerationSingle:
             member = self._concept(str(value))
-            fb.setHiddenValue(member.expandedName).setValue(member.getStandardLabel())
+            fb.setEnumerationValue(member).setValue(self._label(member))
         elif concept.isEnumerationSet:
             members = [self._concept(m) for m in str(value).split()]
-            fb.setHiddenValue(" ".join(sorted(m.expandedName for m in members)))
+            fb.setEnumerationSet(members)
             # An empty set is a valid value, but a fact needs something human readable.
-            fb.setValue(
-                "\n".join(m.getStandardLabel() for m in members) or EMPTY_SET_TEXT
-            )
+            fb.setValue("\n".join(self._label(m) for m in members) or EMPTY_SET_TEXT)
         elif concept.isBoolean:
             fb.setValue(
                 value if isinstance(value, bool) else str(value).lower() == "true"
@@ -307,6 +303,11 @@ class XbrlJsonProcessor:
                 f"Text block is not well-formed XHTML: {e}"
             ) from e
         return Markup(text)
+
+    @staticmethod
+    def _label(member: Concept) -> str:
+        """What a human reads for an enumeration member: its label, or its name if it has none."""
+        return member.getStandardLabel(fallbackIfMissing=str(member.qname))
 
     def _setNumeric(
         self,
@@ -340,15 +341,11 @@ class XbrlJsonProcessor:
                 self.taxonomy.QNameMaker.fromNamespaceAndLocalName(XBRLI_NS, "pure")
             )
             return
-        numerator, _, denominator = unit.partition("/")
-        if denominator:
-            fb.setComplexUnit(self._qname(numerator), self._qname(denominator))
-            return
-        measure = self._qname(numerator)
-        if self.taxonomy.UTR.validCurrency(measure):
-            fb.setCurrency(measure)
+        parsed = Unit.parse(unit, self._qname)
+        if parsed.is_currency:
+            fb.setCurrency(parsed.measure)  # checks it is a real currency
         else:
-            fb.setSimpleUnit(measure)
+            fb.setUnit(parsed)
 
     def _setDimension(self, fb: FactBuilder, name: str, member: Any) -> None:
         dimension = self._concept(name)
