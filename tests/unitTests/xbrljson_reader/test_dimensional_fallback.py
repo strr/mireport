@@ -273,3 +273,22 @@ def test_a_fact_in_another_period_says_which_in_a_list() -> None:
         "2024-01-01 &#8211; 2024-12-31"
     ]
     assert sorted(_tagged(html)).count("tp:Total") == 2
+
+
+@pytest.mark.parametrize(
+    ("value", "decimals", "shown"),
+    [
+        ("12.346", 2, "12.35"),  # decimals set how many digits are shown
+        ("12.5", 0, "12.5"),  # but 0 decimals does not round the value away
+        ("12.5", "INF", "12.5"),
+        ("1234", 0, "1,234"),
+    ],
+)
+def test_the_digits_shown_follow_the_decimals_without_changing_a_whole_value(
+    value: str, decimals: object, shown: str
+) -> None:
+    doc = _document()
+    doc["facts"] = {"f": _fact("tp:Total", value)}
+    doc["facts"]["f"]["decimals"] = decimals
+    html = _render(doc)
+    assert re.search(r'name="tp:Total"[^>]*>([^<]*)<', html).group(1) == shown  # type: ignore[union-attr]
