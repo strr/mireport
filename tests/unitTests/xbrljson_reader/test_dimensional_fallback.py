@@ -77,56 +77,70 @@ def _cube(
     return cube
 
 
-def _load() -> None:
-    loadTaxonomyJSON(
-        {
-            "entryPoint": _ENTRY,
-            "namespaces": {"tp": _NS, "xs": "http://www.w3.org/2001/XMLSchema"},
-            "concepts": {
-                "tp:Group": _concept("Group", abstract=True),
-                "tp:Emissions": _concept("Emissions", numeric=True),
-                "tp:Total": _concept("Total", numeric=True),
-                "tp:Intensity": _concept("Intensity", numeric=True),
-                "tp:Note": _concept("Note"),
-                "tp:Orphan": _concept("Orphan"),
-                "tp:ScopeAxis": _concept("Scope [Axis]", dimension=True),
-                "tp:ScopeA": _concept("Scope A", abstract=True),
-                "tp:ScopeB": _concept("Scope B", abstract=True),
-                "tp:TargetAxis": _concept(
-                    "Target [Axis]", dimension=True, other={"typedElement": "tp:TYP"}
+def _load(*, percent: bool = False) -> None:
+    taxonomy = _taxonomy_json()
+    if percent:
+        taxonomy["namespaces"]["dtr-types"] = "http://www.xbrl.org/dtr/type/2022-03-31"
+        taxonomy["concepts"]["tp:Share"] = _percent_concept()
+        taxonomy["presentation"][_ROLE]["rows"].append([1, "tp:Share"])
+    loadTaxonomyJSON(taxonomy)
+
+
+def _percent_concept() -> dict[str, Any]:
+    concept = _concept("Share", numeric=True)
+    concept["dataType"] = "dtr-types:percentItemType"
+    concept["baseDataType"] = "xbrli:pureItemType"
+    return concept
+
+
+def _taxonomy_json() -> dict[str, Any]:
+    return {
+        "entryPoint": _ENTRY,
+        "namespaces": {"tp": _NS, "xs": "http://www.w3.org/2001/XMLSchema"},
+        "concepts": {
+            "tp:Group": _concept("Group", abstract=True),
+            "tp:Emissions": _concept("Emissions", numeric=True),
+            "tp:Total": _concept("Total", numeric=True),
+            "tp:Intensity": _concept("Intensity", numeric=True),
+            "tp:Note": _concept("Note"),
+            "tp:Orphan": _concept("Orphan"),
+            "tp:ScopeAxis": _concept("Scope [Axis]", dimension=True),
+            "tp:ScopeA": _concept("Scope A", abstract=True),
+            "tp:ScopeB": _concept("Scope B", abstract=True),
+            "tp:TargetAxis": _concept(
+                "Target [Axis]", dimension=True, other={"typedElement": "tp:TYP"}
+            ),
+            "tp:ScopeCube": _concept("Scope cube", hypercube=True),
+            "tp:TargetCube": _concept("Target cube", hypercube=True),
+        },
+        "xs_elements": {
+            "tp:TYP": {"dataType": "xs:string", "baseDataType": "xs:string"}
+        },
+        # Only primary items are presented: no hypercube, axis or member in the group.
+        "presentation": {
+            _ROLE: {
+                "definition": "Group",
+                "rows": [
+                    [0, "tp:Group"],
+                    [1, "tp:Emissions"],
+                    [1, "tp:Total"],
+                    [1, "tp:Intensity"],
+                    [1, "tp:Note"],
+                ],
+            }
+        },
+        "dimensions": {
+            "_defaults": {},
+            _ROLE: {
+                "tp:ScopeCube": _cube(
+                    ["tp:Emissions"], {"tp:ScopeAxis": ["tp:ScopeA", "tp:ScopeB"]}
                 ),
-                "tp:ScopeCube": _concept("Scope cube", hypercube=True),
-                "tp:TargetCube": _concept("Target cube", hypercube=True),
+                "tp:TargetCube": _cube(
+                    ["tp:Intensity", "tp:Note"], {}, ["tp:TargetAxis"]
+                ),
             },
-            "xs_elements": {
-                "tp:TYP": {"dataType": "xs:string", "baseDataType": "xs:string"}
-            },
-            # Only primary items are presented: no hypercube, axis or member in the group.
-            "presentation": {
-                _ROLE: {
-                    "definition": "Group",
-                    "rows": [
-                        [0, "tp:Group"],
-                        [1, "tp:Emissions"],
-                        [1, "tp:Total"],
-                        [1, "tp:Intensity"],
-                        [1, "tp:Note"],
-                    ],
-                }
-            },
-            "dimensions": {
-                "_defaults": {},
-                _ROLE: {
-                    "tp:ScopeCube": _cube(
-                        ["tp:Emissions"], {"tp:ScopeAxis": ["tp:ScopeA", "tp:ScopeB"]}
-                    ),
-                    "tp:TargetCube": _cube(
-                        ["tp:Intensity", "tp:Note"], {}, ["tp:TargetAxis"]
-                    ),
-                },
-            },
-        }
-    )
+        },
+    }
 
 
 def _fact(concept: str, value: str, **dims: str) -> dict[str, Any]:
@@ -208,6 +222,23 @@ def test_a_gap_in_the_grid_is_left_blank() -> None:
     byTarget = re.findall(r"<table.*?</table>", html, re.DOTALL)[1]
     # Note has no fact for T2.
     assert byTarget.count("<td></td>") == 1
+
+
+def test_a_percent_is_shown_scaled_but_stored_as_given() -> None:
+    """percentItemType holds a fraction, so it is displayed x100 with ix:scale -2. The XBRL value
+    and decimals must come out exactly as the source gave them: the reader may not add the 2
+    decimals that mireport's own percentage helper adds for a spreadsheet's display decimals."""
+    _load(percent=True)
+    doc = _document()
+    doc["facts"] = {"p1": _fact("tp:Share", "0.125")}
+    doc["facts"]["p1"]["decimals"] = 3
+    processor = XbrlJsonProcessor(doc, ConversionResultsBuilder(), strict=True)
+    html = processor.createReport().getInlineReport().fileContent.decode("utf-8")
+    tag = re.search(r"<ix:nonFraction[^>]*name=\"tp:Share\"[^>]*>([^<]*)<", html)
+    assert tag, html[-2000:]
+    assert 'scale="-2"' in tag.group(0)
+    assert 'decimals="3"' in tag.group(0)  # not 5
+    assert tag.group(1).replace(",", "").startswith("12.5")  # shown as 12.5 %
 
 
 def test_a_fact_that_appears_nowhere_is_an_error_when_strict() -> None:

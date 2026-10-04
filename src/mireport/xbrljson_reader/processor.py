@@ -18,6 +18,9 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from lxml import etree
+from markupsafe import Markup
+
 from mireport.conversionresults import ConversionResultsBuilder, MessageType, Severity
 from mireport.exceptions import InlineReportException
 from mireport.report import InlineReport
@@ -28,6 +31,7 @@ from mireport.xml import ISO4217_NS, XBRLI_NS
 
 L = logging.getLogger(__name__)
 
+XHTML_NS = "http://www.w3.org/1999/xhtml"
 XBRL_JSON_DOCUMENT_TYPE = "https://xbrl.org/2021/xbrl-json"
 # The core aspects of an OIM fact; every other key under "dimensions" is a taxonomy dimension.
 # What the xlsx reader shows for an empty enumeration set (EE_SET_DESIRED_EMPTY_PLACEHOLDER_VALUE).
@@ -287,8 +291,22 @@ class XbrlJsonProcessor:
             )
         elif concept.isNumeric:
             self._setNumeric(fb, concept, value, fact.get("decimals"), unit)
+        elif concept.isTextblock:
+            fb.setValue(self._xhtml(str(value)))
         else:
             fb.setValue(str(value))
+
+    @staticmethod
+    def _xhtml(text: str) -> Markup:
+        """A text block's value is XHTML. It is emitted as markup, not escaped text, so it must be
+        well-formed: a broken fragment would make the whole report unreadable."""
+        try:
+            etree.fromstring(f"<div xmlns='{XHTML_NS}'>{text}</div>")
+        except etree.XMLSyntaxError as e:
+            raise InlineReportException(
+                f"Text block is not well-formed XHTML: {e}"
+            ) from e
+        return Markup(text)
 
     def _setNumeric(
         self,
@@ -311,7 +329,13 @@ class XbrlJsonProcessor:
             else int(decimals)
         )
         if concept.dataType.localName == "percentItemType":
-            fb.setPercentageValue(float(number), places, inputIsDecimalForm=True)
+            # Shown as a percentage (x100, with ix:scale -2) but stored as given. Not
+            # setPercentageValue(): it takes display decimals and adds 2, and the decimals of an
+            # xBRL-JSON fact are already the XBRL ones, so the report would claim more precision.
+            shown = number * 100
+            fb.setValue(
+                int(shown) if shown == shown.to_integral() else float(shown)
+            ).setScale(-2).setDecimals(places)
         else:
             fb.setValue(asNumber).setDecimals(places)
 
