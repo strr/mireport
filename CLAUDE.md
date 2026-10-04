@@ -167,12 +167,45 @@ used inside the xlsx reader. Errors accumulate; `abortEarlyIfErrors()` raises `E
 defined checkpoints rather than failing at the first problem. Dev-info messages are hidden from users
 (`--devinfo` on the CLI reveals them).
 
-### Layout (`mireport/report/layout.py`, `disclosure_layout.py`)
+### The fact model (`mireport/report/model.py`, `fact.py`, `factbuilder.py`, `aoix.py`)
 
-The report's structure is derived from the taxonomy's presentation linkbase:
-`ReportLayoutOrganiser.organise()` turns presentation groups into sections and tables, guided by a
-`DisclosureLayoutStrategy` selected per entry point (`layoutStrategy` in the disclosure JSON), which
-also builds the table of contents and section labels.
+A `Fact` is typed values, not aoix strings: `concept`, `value`, a `ReportPeriod`, a `Unit` (measures over
+measures, `Unit.parse("(a*b)/c", ...)`), `decimals`, `scale`, `ExplicitDimensionValue`s,
+`TypedDimensionValue`s (the member's text, unescaped) and enumeration members. Build one with a
+`FactBuilder`, which keeps its setters (`setSimpleUnit`, `setCurrency`, `setNamedPeriod`, `setTypedDimension`,
+`setEnumerationValue`/`setEnumerationSet`...) and does the validation. **aoix text is written in exactly one place,
+`mireport/report/aoix.py`**, from those fields and in the current syntax only (`typed-value-wrapper=`,
+`units=a/b`); `period-type`, `escape`, `transform` and `fn-refs` are derived there, not stored. A typed value that
+aoix cannot quote (a double quote) is refused rather than written with the deprecated `typed` keyword. A
+monetary fact carries its currency (the report's default, unless it says otherwise).
+
+`setPercentageFact(fraction, decimals)` takes XBRL's own value and decimals (0.1250 at 4 is shown as 12.50 with
+`ix:scale -2`); `setPercentageValue` takes a spreadsheet's display decimals.
+
+### Layout (`mireport/report/layout/`, `disclosure_layout.py`)
+
+The report's structure is derived from the taxonomy's presentation linkbase: `ReportLayoutOrganiser.organise()`
+turns presentation groups into sections, guided by a `DisclosureLayoutStrategy` selected per entry point
+(`layoutStrategy` in the disclosure JSON), which also builds the table of contents and section labels. The
+package is `model` (sections, tables), `grid` (one `GridBuilder`: say which row and column each fact belongs to,
+and it fills the grid), `headers` (pure functions: what a table says once and what it says per column) and
+`organiser`. A *list* group shows one line per concept; a *table* group follows its hypercube if it has exactly one
+dimension; a dimensional fact in a list, and any fact no group's table shows, gets a table built from its own
+dimensions ("... - by Target Category and Target Identifier"). **Nothing is dropped for want of a layout**;
+`report.requireAllFactsRendered = True` makes anything that still would be an error.
+
+### Periods and a prior period
+
+A report has a current period (`setDefaultPeriodName`), an optional prior period (`setPriorPeriodName`), and any
+other periods (such as the VSME baseline and target years); `periodRole` and `reportingPeriods` say which is
+which. A fact's period is part of its table cell, so a current and a prior value for the same concept and
+dimension sit side by side: a column holding facts from more than one period is laid out once per period, each
+period said once over its columns; a list shows a concept's prior value beside the current one. When every column is
+in a single period (one period, or baseline and target years each in their own column) nothing changes. The
+xBRL-JSON reader takes the latest-ending duration as current and the one ending a year earlier as prior. **The VSME
+Excel template reports one period** (FAQ item 7), so there is no Excel data for a prior one: the disclosure
+config's `periods[].role` and the skip-if-absent rule are the groundwork, and reading prior *values* needs a
+template contract from EFRAG.
 
 ### Arelle boundary (`mireport/arelle/`)
 

@@ -134,3 +134,25 @@ aoix text is produced in one module, `mireport/report/aoix.py`, from the typed f
 * Reading prior-period values from the VSME Excel template (EFRAG template contract).
 * Instants as first-class report periods (aoix derives them; revisit only if a prior *instant-only* report appears).
 * `inline-report-flat-list.html.jinja` looks unused; it is left alone and noted.
+
+## What was done (2026-10-04)
+
+All ten steps, in this order of commits on `strr/typed-model-prior-period`: the typed value classes; the typed
+`Fact`/`FactBuilder`/`InlineReport` with `aoix.py` as the only aoix writer; the layout package with one grid builder;
+direct tests of the header functions; the `decimals == 0` behaviour examined and pinned (not changed: rounding 12.5 to
+12 would change the fact); the prior-period model, tables, lists and document header; the xBRL-JSON reader's period
+roles; the Excel config's roles; a real-VSME prior-period test.
+
+**Evidence.** After every refactor commit the 22 golden samples rendered byte-identically (6 test workbooks, the
+1.3.0 sample, 15 TPT reports). Arelle accepts the 278-fact VSME 1.3.0 report (144 current + 134 prior) with no errors or
+warnings, and three TPT reports with a prior period regenerate fact for fact across both periods. The TPT workspace's
+`verify-all.sh` passes all nine steps against this branch.
+
+**Differences from the plan.** "Facts shown nowhere" is judged across all groups (a VSME concept sits in several, so
+a per-group test duplicated facts; found by the golden check). The `Fact` keeps the order dimensions were given in,
+because reordering them changed the output. An unknown period role or default in the configuration raises instead of
+reporting a message nobody sees.
+
+**Still open.** Reading prior values from the VSME Excel template (EFRAG). Rendering of a prior period has been checked
+structurally and by Arelle, not by eye in a browser. `inline-report-flat-list.html.jinja` looks unused. Three mypy
+errors predate this branch (`localise.py`, `coverage_report_generator/_sampling.py`).
