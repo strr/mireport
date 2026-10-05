@@ -406,6 +406,14 @@ class InlineReport:
     def facts(self) -> list[Fact]:
         return list(self._facts)
 
+    def duplicates(self) -> list[list[Fact]]:
+        """Groups of two or more facts that are duplicates of one another (see
+        mireport.report.duplicates), in the order the first of each group was added."""
+        groups: dict[tuple, list[Fact]] = defaultdict(list)
+        for fact in self._facts:
+            groups[fact.duplicateKey].append(fact)
+        return [group for group in groups.values() if len(group) > 1]
+
     def getFacts(self, concept: Concept) -> list[Fact]:
         result = self._factsByConcept.get(concept)
         return [] if result is None else result.copy()

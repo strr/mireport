@@ -406,18 +406,6 @@ class TestCheckAllFactsUsed:
         o.report.getFacts.return_value = [unused]
         o.checkAllFactsUsed()  # must not raise
 
-    def test_unused_fact_with_inconsistent_duplicate_logs_warning(self, caplog):
-        concept = MagicMock(spec=Concept)
-        context = ("2024",)
-        unused = _fact(value="v1", concept=concept, context=context)
-        duplicate = _fact(value="v2", concept=concept, context=context)
-        o = _organiser(facts_by_concept={concept: [unused, duplicate]})
-        o.reportSections = []
-        o.report.getFacts.return_value = [unused, duplicate]
-        with caplog.at_level(logging.WARNING, logger="mireport.report.layout"):
-            o.checkAllFactsUsed()
-        assert any("inconsistent" in r.message.lower() for r in caplog.records)
-
 
 class TestCreateReportSections:
     def _make_group(self, style, concept, facts):

@@ -107,6 +107,18 @@ class Fact:
             None if self.enumeration is None else frozenset(self.enumeration),
         )
 
+    @property
+    def duplicateKey(self) -> tuple:
+        """What makes two facts duplicates (OIM): concept, period *dates* (not the name it goes by),
+        unit and dimensions. Not the value, decimals or scale."""
+        return (
+            self.concept.qname,
+            self.period.duration,
+            self.unit,
+            frozenset(self.explicit_values),
+            frozenset(self.typed_values),
+        )
+
     def __key(self) -> tuple:
         return (self.concept.qname, self.value, *self.context_key)
 
