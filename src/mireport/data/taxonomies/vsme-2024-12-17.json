@@ -68991,6 +68991,170 @@
       "role": "https://xbrl.org/2022/role/property"
     }
   ],
+  "roles": {
+    "http://www.xbrl.org/taxonomy/int/country/roles/domain": {
+      "definition": "Country List"
+    },
+    "https://xbrl.efrag.org/taxonomy/nace/2025-01-01/roles/domain": {
+      "definition": "NACE List"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99001": {
+      "definition": "[99001] Enumeration - Basis for preparation"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99002": {
+      "definition": "[99002] Enumeration - List of disclosures"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99003": {
+      "definition": "[99003] Enumeration - Undertakings Legal Form"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99005": {
+      "definition": "[99005] Enumeration - Type of number of employees"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99007": {
+      "definition": "[99007] Enumeration - Type of practice, policy and future initiative"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99008": {
+      "definition": "[99008] Enumeration - Sustainability issues addressed"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99009": {
+      "definition": "[99009] Enumeration - Type of content covered by the code of conduct or human rights policy for its own workforce"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99010": {
+      "definition": "[99010] Enumeration - Basis for reporting"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/enum-99014": {
+      "definition": "[99014] Enumeration - Employee counting methodology"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b01000": {
+      "definition": "[B01.000] - General information - Basis for Preparation"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b01100": {
+      "definition": "[B01.100] - General information - List of subsidiaries"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b01200": {
+      "definition": "[B01.200] - General information - List of sites"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b02000": {
+      "definition": "[B02.000] - General information - Practices, policies and/or future initiatives for transitioning towards a more sustainable economy"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b02100": {
+      "definition": "[B02.100] - General information - Cooperative specific disclosures"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b03000": {
+      "definition": "[B03.000] - Environment - Total Energy Consumption"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b03100": {
+      "definition": "[B03.100] - Environment - Breakdown of energy consumption"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b03200": {
+      "definition": "[B03.200] - Environment - Estimated Greenhouse Gas Emissions"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b03300": {
+      "definition": "[B03.300] - Environment - Greenhouse Gas Emissions intensity"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b04000": {
+      "definition": "[B04.000] - Environment - Pollution of air, water and soil: availability of public disclosure"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b04100": {
+      "definition": "[B04.100] - Environment - Pollution of air, water and soil: amount of emissions"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b05000": {
+      "definition": "[B05.000] - Environment - Sites in biodiversity sensitive areas"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b05100": {
+      "definition": "[B05.100] - Environment - Biodiversity - on Land-use"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b06000": {
+      "definition": "[B06.000] - Environment - Water Withdrawal"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b06100": {
+      "definition": "[B06.100] - Environment - Water Consumption"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b07000": {
+      "definition": "[B07.000] - Environment - Description of circular economy principles"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b07100": {
+      "definition": "[B07.100] - Environment - Breakdown of waste by type"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b07200": {
+      "definition": "[B07.200] - Environment - Total Hazardous and Non-Hazardous waste"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b07300": {
+      "definition": "[B07.300] - Environment - Breakdown of annual mass-flow of relevant materials used by the undertaking"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b07400": {
+      "definition": "[B07.400] - Environment - Total annual mass-flow of materials used by the undertaking"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b08000": {
+      "definition": "[B08.000] - Social - Workforce - General characteristics: type of contract"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b08100": {
+      "definition": "[B08.100] - Social - Workforce - General characteristics: gender"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b08200": {
+      "definition": "[B08.200] - Social - Workforce - General characteristics: country of employment"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b08300": {
+      "definition": "[B08.300] - Social - Workforce - General characteristics: turnover rate"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b09000": {
+      "definition": "[B09.000] - Social - Workforce - Health and safety"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b10000": {
+      "definition": "[B10.000] - Social - Workforce - Remuneration, collective bargaining and training"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-b11000": {
+      "definition": "[B11.000] - Governance - Convictions and fines for corruption and bribery"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c01000": {
+      "definition": "[C01.000] - General information - Strategy: Business Model and Sustainability \u2013 Related Initiatives"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c02000": {
+      "definition": "[C02.000] - General information - Description of practices, policies and/or future initiatives for transitioning towards a more sustainable economy"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c03000": {
+      "definition": "[C03.000] - Environment - Greenhouse Gas Emissions Reduction Baseline and Target Year"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c03100": {
+      "definition": "[C03.100] - Environment - Greenhouse Gas Emission Reduction Targets"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c03200": {
+      "definition": "[C03.200] - Environment - Disclosure of list of main actions the entity seeks to achieve its targets"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c03300": {
+      "definition": "[C03.300] - Environment - Transition plan for undertakings operating in high climate impact sectors"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c04000": {
+      "definition": "[C04.000] - Environment - Climate risks"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c05000": {
+      "definition": "[C05.000] - Social - Additional (general) workforce characteristics"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c06000": {
+      "definition": "[C06.000] - Social - Additional own workforce information - Human rights policies and processes"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c07000": {
+      "definition": "[C07.000] - Social - Severe negative human rights incidents"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c08000": {
+      "definition": "[C08.000] - Governance - Revenues derived from activies"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c08100": {
+      "definition": "[C08.100] - Governance - Exclusion from EU benchmarks"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-c09000": {
+      "definition": "[C09.000] - Governance - Gender diversity ratio in the governance body"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-default-dimensions": {
+      "definition": "[000.000] Default Dimensions"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2024-12-17/role-other": {
+      "definition": "[D99.000] - Other and/or entity specific information"
+    },
+    "https://xbrl.efrag.org/taxonomy/waste/2023-12-06/waste/role-100": {
+      "definition": "Waste Type List"
+    }
+  },
   "xs_elements": {
     "vsme:TYP": {
       "baseDataType": "xs:string",

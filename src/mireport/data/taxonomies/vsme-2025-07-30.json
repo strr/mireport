@@ -80335,6 +80335,581 @@
       "role": "https://xbrl.org/2022/role/property"
     }
   ],
+  "roles": {
+    "http://www.xbrl.org/2008/role/link": {},
+    "http://www.xbrl.org/taxonomy/int/country/roles/domain": {
+      "definition": "Country List"
+    },
+    "https://xbrl.efrag.org/taxonomy/nace/2025-01-01/roles/domain": {
+      "definition": "NACE List"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99001": {
+      "definition": "[99001] Enumeration - Basis for preparation"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99002": {
+      "definition": "[99002] Enumeration - List of disclosures"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99003": {
+      "definition": "[99003] Enumeration - Undertakings Legal Form"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99005": {
+      "definition": "[99005] Enumeration - Type of number of employees"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99007": {
+      "definition": "[99007] Enumeration - Type of practice, policy and future initiative"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99008": {
+      "definition": "[99008] Enumeration - Sustainability issues addressed"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99009": {
+      "definition": "[99009] Enumeration - Type of content covered by the code of conduct or human rights policy for its own workforce"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99010": {
+      "definition": "[99010] Enumeration - Basis for reporting"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/enum-99014": {
+      "definition": "[99014] Enumeration - Employee counting methodology"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b01000": {
+      "definition": "[B01.000] - General information - Basis for Preparation",
+      "labels": {
+        "da": "Grundl\u00e6ggende oplysninger - Grundlag for udarbejdelse",
+        "de": "[B01.000] - Allgemeine Informationen - Grundlagen f\u00fcr die Erstellung",
+        "es": "[B01.000] - Informaci\u00f3n general - Base para la elaboraci\u00f3n",
+        "fr": "[B01.000] - Informations g\u00e9n\u00e9rales - Base de pr\u00e9paration",
+        "it": "[B01.000] - Informazioni generali - Criteri per la redazione",
+        "lt": "[B01.000] \u2013 Bendroji informacija \u2013 Parengimo pagrindas",
+        "pl": "[B01.000] - Informacje og\u00f3lne - Podstawa sporz\u0105dzenia",
+        "pt": "[B01.000] - Informa\u00e7\u00e3o geral - Base para Prepara\u00e7\u00e3o"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b01100": {
+      "definition": "[B01.100] - General information - List of subsidiaries",
+      "labels": {
+        "da": "[B01.100] - Generel information - Liste over datterselskaber",
+        "de": "[B01.100] - Allgemeine Informationen - Liste der Tochterunternehmen",
+        "es": "[B01.100] - Informaci\u00f3n general - Lista de filiales",
+        "fr": "[B01.100] - Informations g\u00e9n\u00e9rales - Liste des filiales",
+        "it": "[B01.100] - Informazioni generali - Elenco delle imprese figlie",
+        "lt": "[B01.100] \u2013 Bendroji informacija \u2013 Dukterini\u0173 \u012fmoni\u0173 s\u0105ra\u0161as",
+        "pl": "[B01.100] - Informacje og\u00f3lne - Wykaz jednostek zale\u017cnych",
+        "pt": "[B01.100] - Informa\u00e7\u00e3o geral - Lista de subsidi\u00e1rias"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b01200": {
+      "definition": "[B01.200] - General information - List of sites",
+      "labels": {
+        "da": "[B01.200] - Generel information - Liste over lokationer",
+        "de": "[B01.200] - Allgemeine Informationen - Liste der Standorte",
+        "es": "[B01.200] - Informaci\u00f3n general - Lista de emplazamientos",
+        "fr": "[B01.200] - Informations g\u00e9n\u00e9rales - Liste des sites",
+        "it": "[B01.200] - Informazioni generali - Elenco dei siti",
+        "lt": "[B01.200] - Bendroji informacija - Objekt\u0173 s\u0105ra\u0161as",
+        "pl": "B01.200] - Informacje og\u00f3lne - Lista lokalizacji",
+        "pt": "[B01.200] - Informa\u00e7\u00f5es gerais - Lista de locais"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b02000": {
+      "definition": "[B02.000] - General information - Practices, policies and/or future initiatives for transitioning towards a more sustainable economy",
+      "labels": {
+        "da": "[B02.000] - Generelle oplysninger - Praksisser, politikker og/eller fremtidige initiativer for omstilling til en mere b\u00e6redygtig \u00f8konomi",
+        "de": "[B02.000] - Allgemeine Informationen - Verfahrensweisen, Richtlinien und/oder k\u00fcnftige Initiativen f\u00fcr den \u00dcbergang zu einer nachhaltigeren Wirtschaft",
+        "es": "[B02.000] - Informaci\u00f3n general - Pr\u00e1cticas, pol\u00edticas o iniciativas futuras para la transici\u00f3n hacia una econom\u00eda m\u00e1s sostenible",
+        "fr": "[B02.000] - Informations g\u00e9n\u00e9rales - Pratiques, politiques et/ou initiatives futures en vue de la transition vers une \u00e9conomie plus durable",
+        "it": "[B02.000] - Informazioni generali - Pratiche, politiche e/o iniziative future per la transizione verso un'economia pi\u00f9 sostenibile",
+        "lt": "[B02.000] - Bendroji informacija - Praktikos, politikos ir (arba) b\u016bsimos iniciatyvos, skirtos pereiti prie tvaresn\u0117s ekonomikos",
+        "pl": "[B02.000] - Informacje og\u00f3lne - Praktyki, polityki i/lub przysz\u0142e inicjatywy na rzecz przej\u015bcia na bardziej zr\u00f3wnowa\u017con\u0105 gospodark\u0119",
+        "pt": "[B02.000] - Informa\u00e7\u00f5es gerais - Pr\u00e1ticas, pol\u00edticas e/ou iniciativas futuras de transi\u00e7\u00e3o para uma economia mais sustent\u00e1vel"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b02100": {
+      "definition": "[B02.100] - General information - Cooperative specific disclosures",
+      "labels": {
+        "da": "[B02.100] - Generelle oplysninger - Specifikke oplysninger for kooperativer",
+        "de": "[B02.100] - Allgemeine Informationen - Genossenschaftsspezifische Angaben",
+        "es": "[B02.100] - Informaci\u00f3n general - Divulgaciones espec\u00edficas de cooperativas",
+        "fr": "[B02.100] - Informations g\u00e9n\u00e9rales - Informations sp\u00e9cifiques aux coop\u00e9ratives",
+        "it": "[B02.100] - Informazioni generali - Informative specifiche per le cooperative",
+        "lt": "[B02.100] \u2013 Bendroji informacija \u2013 Kooperatyvams b\u016bdingi atskleidimai",
+        "pl": "[B02.100] - Informacje og\u00f3lne - Szczeg\u00f3lne ujawnienia dotycz\u0105ce sp\u00f3\u0142dzielni",
+        "pt": "[B02.100] - Informa\u00e7\u00f5es gerais - Divulga\u00e7\u00f5es espec\u00edficas para cooperativas"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b03000": {
+      "definition": "[B03.000] - Environment - Total Energy Consumption",
+      "labels": {
+        "da": "[B03.000] - Milj\u00f8 - Samlet energiforbrug",
+        "de": "[B03.000] - Umwelt - Gesamtenergieverbrauch",
+        "es": "[B03.000] - Medio ambiente - Consumo total de energ\u00eda",
+        "fr": "[B03.000] - Environnement - Consommation d'\u00e9nergie totale",
+        "it": "[B03.000] - Ambiente - Totale Consumo di Energia",
+        "lt": "[B03.000] - Aplinkos sritis - Bendras energijos suvartojimas",
+        "pl": "[B03.000] - \u015arodowisko - Ca\u0142kowite zu\u017cycie energii",
+        "pt": "[B03.000] - Ambiente - Consumo Total de Energia"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b03100": {
+      "definition": "[B03.100] - Environment - Breakdown of energy consumption",
+      "labels": {
+        "da": "[B03.100] - Milj\u00f8 - Opdeling af energiforbrug",
+        "de": "[B03.100] - Umwelt - Aufschl\u00fcsselung des Energieverbrauchs",
+        "es": "[B03.100] - Medio ambiente - Desglose del consumo de energ\u00eda",
+        "fr": "[B03.100] - Environnement - Ventilation de la consommation d'\u00e9nergie",
+        "it": "[B03.100] - Ambiente - Ripartizione del consumo di energia",
+        "lt": "[B03.100] - Aplinkos sritis - Energijos suvartojimo suskirstymas",
+        "pl": "[B03.100] - \u015arodowisko - Podzia\u0142 zu\u017cycia energii",
+        "pt": "[B03.100] - Ambiente - Discrimina\u00e7\u00e3o do consumo de energia"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b03200": {
+      "definition": "[B03.200] - Environment - Estimated Greenhouse Gas Emissions",
+      "labels": {
+        "da": "[B03.200] - Milj\u00f8 - Ansl\u00e5ede drivhusgasudledninger",
+        "de": "[B03.200] - Umwelt - Gesch\u00e4tzte Treibhausgasemissionen",
+        "es": "[B03.200] - Medio ambiente - Emisiones brutas estimadas de gases de efecto invernadero",
+        "fr": "[B03.200] - Environnement - Estimation des \u00e9missions de gaz \u00e0 effet de serre",
+        "it": "[B03.200] - Ambiente - Emissioni stimate di gas a effetto serra",
+        "lt": "[B03.200] - Aplinkos sritis - Apskai\u010diuotas i\u0161metam\u0173 \u0161iltnamio efekt\u0105 sukelian\u010di\u0173 duj\u0173 kiekis",
+        "pl": "[B03.200] - \u015arodowisko - Szacunkowa emisja gaz\u00f3w cieplarnianych",
+        "pt": "\"[B03.200] - Ambiente - Emiss\u00f5es estimadas de Gases de Efeito de Estufa\""
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b03300": {
+      "definition": "[B03.300] - Environment - Greenhouse Gas Emissions intensity",
+      "labels": {
+        "da": "[B03.300] - Milj\u00f8 -  Drivhusgasintensitet",
+        "de": "[B03.300] - Umwelt - Treibhausgas-Emissionsintensit\u00e4t",
+        "es": "[B03.300] - Medio ambiente - Intensidad de emisiones de gases de efecto invernadero",
+        "fr": "[B03.300] - Environnement - Intensit\u00e9 des \u00e9missions de gaz \u00e0 effet de serre",
+        "it": "[B03.300] - Ambiente - Intensit\u00e0 delle emissioni di gas a effetto serra",
+        "lt": "[B03.300] \u2013 Aplinkos sritis \u2013 \u0161iltnamio efekt\u0105 sukelian\u010di\u0173 duj\u0173 intensyvumas",
+        "pl": "[B03.300] - \u015arodowisko - Intensywno\u015b\u0107 emisji gaz\u00f3w cieplarnianych",
+        "pt": "[B03.300] - Ambiente - Intensidade das Emiss\u00f5es de Gases com Efeito de Estufa"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b04000": {
+      "definition": "[B04.000] - Environment - Pollution of air, water and soil: availability of public disclosure",
+      "labels": {
+        "da": "[B04.000] - Milj\u00f8 - Forurening af luft, vand og jord: tilg\u00e6ngelighed af offentligg\u00f8relse",
+        "de": "[B04.000] - Umwelt - Luft-, Wasser- und Bodenverschmutzung; Verf\u00fcgbarkeit von \u00f6ffentlichen Angaben",
+        "es": "[B04.000] - Medio ambiente - Contaminaci\u00f3n del aire, agua y suelo: disponibilidad de divulgaci\u00f3n p\u00fablica",
+        "fr": "[B04.000] - Environnement - Pollution de l\u2019air, de l\u2019eau et des sols : disponibilit\u00e9 de la divulgation publique",
+        "it": "[B04.000] - Ambiente - Inquinamento di aria, acqua e suolo: informativa disponibile al pubblico",
+        "lt": "[B04.000] - Aplinkos sritis - Oro, vandens ir dirvo\u017eemio tar\u0161a: vie\u0161o atskleidimo prieinamumas",
+        "pl": "[B04.000] \u2013 \u015arodowisko \u2013 Zanieczyszczenie powietrza, wody i gleby: dost\u0119pno\u015b\u0107 publicznego ujawnienia informacji",
+        "pt": "[B04.000] - Ambiente - Polui\u00e7\u00e3o do ar, \u00e1gua e solo: disponibilidade de divulga\u00e7\u00f5es p\u00fablicas"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b04100": {
+      "definition": "[B04.100] - Environment - Pollution of air, water and soil: amount of emissions",
+      "labels": {
+        "da": "[B04.100] - Milj\u00f8 - Forurening af luft, vand og jord: m\u00e6ngde af udledninger",
+        "de": "[B04.100] - Umwelt - Luft-, Wasser- und Bodenverschmutzung; Emissionsmenge",
+        "es": "[B04.100] - Medio ambiente - Contaminaci\u00f3n del aire, agua y suelo: cantidad de emisiones",
+        "fr": "[B04.100] - Environnement - Pollution de l\u2019air, de l\u2019eau et des sols : quantit\u00e9 des \u00e9missions",
+        "it": "[B04.100] - Ambiente - Inquinamento di aria, acqua e suolo: quantit\u00e0 delle emissioni",
+        "lt": "[B04.100] - Aplinkos sritis - Oro, vandens ir dirvo\u017eemio tar\u0161a: i\u0161metam\u0173 ter\u0161al\u0173 kiekis",
+        "pl": "[B04.100] - \u015arodowisko - Zanieczyszczenie powietrza, wody i gleby: ilo\u015b\u0107 emisji",
+        "pt": "[B04.100] - Ambiente - Polui\u00e7\u00e3o do ar, \u00e1gua e solo: quantidade de emiss\u00f5es"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b05000": {
+      "definition": "[B05.000] - Environment - Sites in biodiversity sensitive areas",
+      "labels": {
+        "da": "[B05.000] - Milj\u00f8 - Lokationer i biodiversitetsf\u00f8lsomme omr\u00e5der",
+        "de": "[B05.000] - Umwelt - Standorte in Gebieten mit schutzbed\u00fcrftiger Biodiversit\u00e4t",
+        "es": "[B05.000] - Medio ambiente - Emplazamientos en \u00e1reas sensibles para la biodiversidad",
+        "fr": "[B05.000] - Environnement - Sites situ\u00e9s dans des zones sensibles sur le plan de la biodiversit\u00e9",
+        "it": "[B05.000] - Ambiente - Siti ubicati all'interno di un'area sensibile sotto il profilo della biodiversit\u00e0",
+        "lt": "[B05.000] \u2013 Aplinkos sritis \u2013 objektai biologinei \u012fvairovei jautriose teritorijose",
+        "pl": "[B05.000] - \u015arodowisko - Lokalizacje na obszarach wra\u017cliwych pod wzgl\u0119dem bior\u00f3\u017cnorodno\u015bci",
+        "pt": "[B05.000] - Ambiente - Locais em \u00e1reas sens\u00edveis \u00e0 biodiversidade"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b05100": {
+      "definition": "[B05.100] - Environment - Biodiversity - on Land-use",
+      "labels": {
+        "da": "[B05.100] - Milj\u00f8 - Biodiversitet - p\u00e5 Arealforbrug",
+        "de": "[B05.100] - Umwelt - Biodiversit\u00e4t - Fl\u00e4chennutzung",
+        "es": "[B05.100] - Medio Ambiente - Biodiversidad - en uso de la tierra",
+        "fr": "[B05.100] - Environnement - Biodiversit\u00e9 - Utilisation des terres",
+        "it": "[B05.100] - Ambiente - Biodiversit\u00e0 - sull'uso del suolo",
+        "lt": "[B05.100] - Aplinkos sritis - \u012evairov\u0117 - \u017eem\u0117s naudojimas",
+        "pl": "[B05.100] - \u015arodowisko - Bior\u00f3\u017cnorodno\u015b\u0107 - zwi\u0105zana z u\u017cytkowaniem grunt\u00f3w",
+        "pt": "Ambiente \u2013 Biodiversidade \u2013 sobre Utiliza\u00e7\u00e3o do Solo"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b06000": {
+      "definition": "[B06.000] - Environment - Water Withdrawal",
+      "labels": {
+        "da": "[B06.000] - Milj\u00f8 - Vandudtag",
+        "de": "[B06.000] - Umwelt - Wasserentnahme",
+        "es": "[B06.000] - Medio Ambiente - Extracci\u00f3n de Agua",
+        "fr": "[B06.000] - Environnement - Pr\u00e9l\u00e8vements d'eau",
+        "it": "[B06.000] - Ambiente - Prelievo idrico",
+        "lt": "[B06.000] -  Aplinkos sritis - Vandens i\u0161gavimas",
+        "pl": "[B06.000] - \u015arodowisko - Pob\u00f3r wody",
+        "pt": "[B06.000] - Ambiente - Capta\u00e7\u00e3o de \u00c1gua"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b06100": {
+      "definition": "[B06.100] - Environment - Water Consumption",
+      "labels": {
+        "da": "[B06.100] - Milj\u00f8 - Vandforbrug",
+        "de": "[B06.100] - Umwelt - Wasserverbrauch",
+        "es": "[B06.100] - Medio ambiente - Consumo de agua",
+        "fr": "[B06.100] - Environnement - Consommation d\u2019eau",
+        "it": "[B06.100] - Ambiente - Consumo idrico",
+        "lt": "[B06.100] \u2013 Aplinkos sritis \u2013 Vandens suvartojimas",
+        "pl": "[B06.100] - \u015arodowisko - Zu\u017cycie wody",
+        "pt": "[B06.100] - Ambiente - Consumo de \u00c1gua"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b07000": {
+      "definition": "[B07.000] - Environment - Description of circular economy principles",
+      "labels": {
+        "da": "[B07.000] - Milj\u00f8 - Beskrivelse af principper for cirkul\u00e6r \u00f8konomi",
+        "de": "[B07.000] - Umwelt - Beschreibung der Grunds\u00e4tze der Kreislaufwirtschaft",
+        "es": "[B07.000] - Medio ambiente - Descripci\u00f3n de los principios de la econom\u00eda circular",
+        "fr": "[B07.000] - Environnement - Description des principes de l'\u00e9conomie circulaire",
+        "it": "[B07.000] - Ambiente - Descrizione dei principi dell'economia circolare",
+        "lt": "[B07.000] \u2013 Aplinkos sritis \u2013 Apra\u0161ymas apie \u017eiedin\u0117s ekonomikos principus",
+        "pl": "[B07.000] - \u015arodowisko - Opis zasad gospodarki o obiegu zamkni\u0119tym",
+        "pt": "[B07.000] - Ambiente - Descri\u00e7\u00e3o dos princ\u00edpios da economia circular"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b07100": {
+      "definition": "[B07.100] - Environment - Breakdown of waste by type",
+      "labels": {
+        "da": "[B07.100] - Milj\u00f8 - Opdeling af affald efter type",
+        "de": "[B07.100] - Umwelt - Aufschl\u00fcsselung nach Art des Abfalls",
+        "es": "[B07.100] - Medio ambiente - Desglose de residuos por tipo",
+        "fr": "[B07.100] - Environnement - Ventilation des d\u00e9chets par type",
+        "it": "[B07.100] - Ambiente - Ripartizione dei rifiuti per tipo",
+        "lt": "[B07.100] - Aplinkos sritis - Atliek\u0173 suskirstymas pagal tip\u0105",
+        "pl": "[B07.100] - \u015arodowisko - Podzia\u0142 odpad\u00f3w wed\u0142ug rodzaju",
+        "pt": "[B07.100] - Ambiente - Discrimina\u00e7\u00e3o dos res\u00edduos por tipo"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b07200": {
+      "definition": "[B07.200] - Environment - Total Hazardous and Non-Hazardous waste",
+      "labels": {
+        "da": "[B07.200] - Milj\u00f8 - Samlet m\u00e6ngde farligt og ikke-farligt affald",
+        "de": "[B07.200] - Umwelt - Gesamtaufkommen gef\u00e4hrlicher Abf\u00e4lle",
+        "es": "[B07.200]-  Medio ambiente - Residuos totales peligrosos y no peligrosos",
+        "fr": "[B07.200] - Environnement - Total des d\u00e9chets dangereux et non dangereux",
+        "it": "[B07.200] - Ambiente - Totale rifiuti pericolosi e non pericolosi",
+        "lt": "[B07.200] - Aplinkos sritis - Bendras pavojing\u0173 ir nepavojing\u0173 atliek\u0173 kiekis",
+        "pl": "[B07.200] - \u015arodowisko - Ca\u0142kowita ilo\u015b\u0107 odpad\u00f3w niebezpiecznych i odpad\u00f3w innych ni\u017c niebezpieczne",
+        "pt": "[B07.200] - Ambiente - Total de Res\u00edduos Perigosos e N\u00e3o Perigosos"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b07300": {
+      "definition": "[B07.300] - Environment - Breakdown of annual mass-flow of relevant materials used by the undertaking",
+      "labels": {
+        "da": "[B07.300] - Milj\u00f8 - Opdeling af den \u00e5rlige massestr\u00f8m af relevante materialer anvendt af virksomheden",
+        "de": "[B07.300] - Umwelt - Aufschl\u00fcsselung des j\u00e4hrlichen Massenstroms der vom Unternehmen verwendeten relevanten Materialien",
+        "es": "[B07.300] - Medio Ambiente - Desglose del flujo de masa anual de materiales relevantes utilizados por la empresa",
+        "fr": "[B07.300] \u2013 Environnement \u2013 Ventilation annuelle du flux massique des mati\u00e8res pertinentes utilis\u00e9es par l\u2019entreprise",
+        "it": "[B07.300] - Ambiente - Ripartizione del flusso di massa annuo dei materiali pertinenti utilizzati dall'impresa",
+        "lt": "[B07.300] \u2013 Aplinkos sritis \u2013 Metinio reik\u0161ming\u0173 med\u017eiag\u0173, kurias naudoja \u012fmon\u0117, mas\u0117s srauto pasiskirstymas",
+        "pl": "[B07.300] - \u015arodowisko - Podzia\u0142 rocznego przep\u0142ywu masy istotnych materia\u0142\u00f3w wykorzystywanych przez jednostk\u0119",
+        "pt": "[B07.300] - Ambiente \u2013 Desagrega\u00e7\u00e3o do fluxo anual de massa dos materiais relevantes utilizados pela empresa"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b07400": {
+      "definition": "[B07.400] - Environment - Total annual mass-flow of materials used by the undertaking",
+      "labels": {
+        "da": "[B07.400] - Milj\u00f8 - Samlet \u00e5rlig massestr\u00f8m af materialer brugt af virksomheden",
+        "de": "[B07.400] - Umwelt - Gesamter j\u00e4hrlicher Massenstrom der vom Unternehmen verwendeten Materialien",
+        "es": "[B07.400] - Medio ambiente - Flujo de masa anual total de materiales usados por la empresa",
+        "fr": "[B07.400] - Environnement - Flux massique annuel total des mati\u00e8res utilis\u00e9es par l'entreprise",
+        "it": "[B07.400] - Ambiente - Totale flusso di massa annuo dei materiali utilizzati dall'impresa",
+        "lt": "[B07.400] - Aplinkos sritis - Metinis visos \u012fmon\u0117s naudojam\u0173 med\u017eiag\u0173 mas\u0117s srautas",
+        "pl": "[B07.400] - \u015arodowisko - Ca\u0142kowity roczny przep\u0142yw masowy materia\u0142\u00f3w u\u017cywanych przez jednostk\u0119",
+        "pt": "[B07.400] - Ambiente \u2013 Fluxo anual total de massa dos materiais utilizados pela empresa"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b08000": {
+      "definition": "[B08.000] - Social - Workforce - General characteristics: type of contract",
+      "labels": {
+        "da": "[B08.000] - Social - Arbejdsstyrke - Generelle karakteristika: type af kontrakt",
+        "de": "[B08.000] - Sozial - Arbeitskr\u00e4fte - Allgemeine Merkmale: Art des Vertrags",
+        "es": "[B08.000] - Social - Trabajadores - Caracter\u00edsticas generales: tipo de contrato",
+        "fr": "[B08.000] - Social - Personnel - Caract\u00e9ristiques g\u00e9n\u00e9rales : type de contrat",
+        "it": "[B08.000] - Sociale - Forza lavoro - Caratteristiche generali: tipo di contratto",
+        "lt": "[B08.000] - Socialin\u0117 sritis - Darbuotojai - Bendrieji rodikliai: sutarties r\u016b\u0161is",
+        "pl": "[B08.000] - Kwestie spo\u0142eczne - Zasoby pracownicze - Charakterystyka og\u00f3lna: rodzaj umowy",
+        "pt": "[B08.000] - Social - For\u00e7a de trabalho - Caracter\u00edsticas gerais: tipo de contrato"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b08100": {
+      "definition": "[B08.100] - Social - Workforce - General characteristics: gender",
+      "labels": {
+        "da": "[B08.100] - Social - Arbejdsstyrke - Generelle karakteristika: k\u00f8n",
+        "de": "[B08.100] \u2013 Sozial \u2013 Arbeitskr\u00e4fte \u2013 Allgemeine Merkmale: Geschlecht",
+        "es": "[B08.100] - Social - Trabajadores - Caracter\u00edsticas generales: g\u00e9nero",
+        "fr": "[B08.100] - Social - Personnel - Caract\u00e9ristiques g\u00e9n\u00e9rales : genre",
+        "it": "[B08.100] - Sociale - Forza lavoro - Caratteristiche generali: genere",
+        "lt": "[B08.100] - Socialin\u0117 sritis - Darbuotojai - Bendrieji rodikliai: lytis",
+        "pl": "[B08.100] - Kwestie spo\u0142eczne - Zasoby pracownicze \u2013 og\u00f3lna charakterystyka: p\u0142e\u0107",
+        "pt": "[B08.100] - Social - M\u00e3o-de-obra - Caracter\u00edsticas gerais: g\u00e9nero"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b08200": {
+      "definition": "[B08.200] - Social - Workforce - General characteristics: country of employment",
+      "labels": {
+        "da": "[B08.200] - Social - Arbejdsstyrke - Generelle karakteristika: ans\u00e6ttelsesland",
+        "de": "[B08.200] - Sozial - Arbeitskr\u00e4fte - Allgemeine Merkmale: Land des Arbeitsvertrags",
+        "es": "[B08.200] - Social - Trabajadores- Caracter\u00edsticas generales: pa\u00eds de empleo",
+        "fr": "[B08.200] - Social - Personnel - Caract\u00e9ristiques g\u00e9n\u00e9rales : pays du contrat de travail",
+        "it": "[B08.200] - Sociale - Forza lavoro - Caratteristiche generali: paese del contratto di lavoro",
+        "lt": "[B08.200] \u2013 Socialin\u0117 sritis \u2013 Darbuotojai \u2013 Bendrieji rodikliai: darbo sutarties \u0161alis",
+        "pl": "[B08.200] \u2013 Kwestie spo\u0142eczne \u2013 Zasoby pracownicze \u2013 Charakterystyka og\u00f3lna: kraj zatrudnienia",
+        "pt": "\"[B08.200] - Social - M\u00e3o-de-obra - Caracter\u00edsticas gerais: pa\u00eds do contrato de trabalho\""
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b08300": {
+      "definition": "[B08.300] - Social - Workforce - General characteristics: turnover rate",
+      "labels": {
+        "da": "[B08.300] - Social - Arbejdsstyrke - Generelle karakteristika: Medarbejdsoms\u00e6tning",
+        "de": "[B08.300] - Sozial - Arbeitskr\u00e4fte - Allgemeine Merkmale: Fluktuationsrate",
+        "es": "[B08.300] - Social - Trabajadores - Caracter\u00edsticas generales: tasa de rotaci\u00f3n",
+        "fr": "[B08.300] - Social - Personnel - Caract\u00e9ristiques g\u00e9n\u00e9rales : taux de rotation",
+        "it": "[B08.300] - Sociale - Forza lavoro - Caratteristiche generali: tasso di avvicendamento",
+        "lt": "[B08.300] - Socialin\u0117 sritis - Darbuotojai - Bendrieji rodikliai: darbuotoj\u0173 kaitos rodiklis",
+        "pl": "[B08.300] - Kwestie spo\u0142eczne - Zasoby pracownicze - Og\u00f3lna charakterystyka: wska\u017anik rotacji pracownik\u00f3w",
+        "pt": "[B08.300] \u2013 Social \u2013 For\u00e7a de trabalho \u2013 Caracter\u00edsticas gerais: taxa de rotatividade"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b09000": {
+      "definition": "[B09.000] - Social - Workforce - Health and safety",
+      "labels": {
+        "da": "[B09.000] - Social - Arbejdsstyrke - Sundhed og sikkerhed",
+        "de": "[B09.000] - Sozial - Arbeitskr\u00e4fte - Gesundheitsschutz und Sicherheit",
+        "es": "[B09.000] - Social - Trabajadores- Salud y seguridad",
+        "fr": "[B09.000] - Social - Personnel - Sant\u00e9 et s\u00e9curit\u00e9",
+        "it": "[B09.000] - Sociale - Forza lavoro - Salute e sicurezza",
+        "lt": "[B09.000] - Socialin\u0117 sritis - Darbuotojai - Sveikata ir sauga",
+        "pl": "[B09.000] - Kwestie spo\u0142eczne - Zasoby pracownicze - Bezpiecze\u0144stwo i higiena pracy",
+        "pt": "[B09.000] - Social - M\u00e3o-de-obra - Sa\u00fade e seguran\u00e7a"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b10000": {
+      "definition": "[B10.000] - Social - Workforce - Remuneration, collective bargaining and training",
+      "labels": {
+        "da": "[B10.000] - Social - Arbejdsstyrke - Vederlag, kollektive overenskomster og uddannelse",
+        "de": "[B10.000] - Sozial - Arbeitskr\u00e4fte - Verg\u00fctung, Tarifverhandlungen und Schulung",
+        "es": "[B10.000] - Social - Trabajadores\u2013 Retribuci\u00f3n, negociaci\u00f3n colectiva y formaci\u00f3n",
+        "fr": "[B10.000] - Social - Personnel - R\u00e9mun\u00e9ration, n\u00e9gociation collective et formation",
+        "it": "[B10.000] - Sociale - Forza lavoro - Retribuzione, contrattazione collettiva e formazione",
+        "lt": "[B10.000] \u2013 Socialin\u0117 sritis \u2013 Darbuotojai \u2013 Atlyginimas, kolektyvin\u0117s derybos ir mokymai",
+        "pl": "[B10.000] - Kwestie spo\u0142eczne - Zasoby pracownicze - Wynagrodzenie, rokowania zbiorowe i szkolenia",
+        "pt": "[B10.000] - Social - M\u00e3o-de-obra - Remunera\u00e7\u00e3o, negocia\u00e7\u00e3o coletiva e forma\u00e7\u00e3o"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-b11000": {
+      "definition": "[B11.000] - Governance - Convictions and fines for corruption and bribery",
+      "labels": {
+        "da": "B11 \u2013 Domme og b\u00f8der for korruption og bestikkelse",
+        "de": "[B11.000] - Governance - Verurteilungen und Geldstrafen wegen Korruption und Bestechung",
+        "es": "[B11.000] Gobernanza - Condenas y multas por corrupci\u00f3n y soborno",
+        "fr": "[B11.000] \u2013 Gouvernance \u2013 Condamnations et amendes pour corruption et versement de pots-de-vin",
+        "it": "[B11] \u2013 Condanne e ammende per corruzione attiva e passiva",
+        "lt": "[B11.000] \u2013 Valdymo sritis \u2013 Nuteisimai ir baudos u\u017e korupcij\u0105 ir ky\u0161ininkavim\u0105",
+        "pl": "[B11.000] - \u0141ad korporacyjny - Wyroki skazuj\u0105ce i grzywny za naruszenie przepis\u00f3w antykorupcyjnych i przepis\u00f3w w sprawie zwalczania przekupstwa",
+        "pt": "[B11.000] - Governa\u00e7\u00e3o - Condena\u00e7\u00f5es e coimas por corrup\u00e7\u00e3o e suborno"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c01000": {
+      "definition": "[C01.000] - General information - Strategy: Business Model and Sustainability \u2013 Related Initiatives",
+      "labels": {
+        "da": "[C01.000] - Generelle oplysninger - Strategi: Forretningsmodel og b\u00e6redygtighedsrelaterede initiativer",
+        "de": "[C01.000] - Allgemeine Informationen - Strategie: Gesch\u00e4ftsmodell und Nachhaltigkeit \u2013 zugeh\u00f6rige Initiativen",
+        "es": "[C01.000] - Informaci\u00f3n general - Estrategia: Modelo de negocio y sostenibilidad \u2013 Iniciativas relacionadas",
+        "fr": "[C01.000] - C1 \u2013 Strat\u00e9gie : mod\u00e8le \u00e9conomique et durabilit\u00e9 \u2013 initiatives associ\u00e9es",
+        "it": "[C01.000] - Informazioni generali - Strategia: Modello aziendale e iniziative connesse alla sostenibilit\u00e0",
+        "lt": "[C01.000] \u2013 Bendroji informacija \u2013 Strategija: Verslo modelis ir su tvarumu susijusios iniciatyvos",
+        "pl": "[C01.000] - Informacje og\u00f3lne - Strategia: model biznesowy i zr\u00f3wnowa\u017cony rozw\u00f3j \u2013 powi\u0105zane inicjatywy",
+        "pt": "[C01.000] - Informa\u00e7\u00f5es gerais - Estrat\u00e9gia: Modelo de neg\u00f3cio e Sustentabilidade \u2013 Iniciativas conexas"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c02000": {
+      "definition": "[C02.000] - General information - Description of practices, policies and/or future initiatives for transitioning towards a more sustainable economy",
+      "labels": {
+        "da": "[C02.000] - Generelle oplysninger - Beskrivelse af praksisser, politikker og/eller fremtidige initiativer for omstillingen til en mere b\u00e6redygtig \u00f8konomi",
+        "de": "[C02.000] \u2013 Allgemeine Informationen \u2013 Beschreibung von Verfahrensweisen, Richtlinien und/oder k\u00fcnftigen Initiativen f\u00fcr den \u00dcbergang zu einer nachhaltigeren Wirtschaft",
+        "es": "[C02.000] - Informaci\u00f3n general - Descripci\u00f3n de pr\u00e1cticas, pol\u00edticas y/o iniciativas futuras para la transici\u00f3n hacia una econom\u00eda m\u00e1s sostenible",
+        "fr": "[C02.000] - Informations g\u00e9n\u00e9rales - Description des pratiques, politiques et/ou initiatives futures pour la transition vers une \u00e9conomie plus durable",
+        "it": "[C02.000] - Informazioni generali - Descrizione delle pratiche, delle politiche e/o delle iniziative future per la transizione verso un'economia pi\u00f9 sostenibile",
+        "lt": "[C02.000] - Bendroji informacija - Praktik\u0173, politik\u0173 ir (arba) b\u016bsim\u0173 iniciatyv\u0173, skirt\u0173 pereiti prie tvaresn\u0117s ekonomikos, apra\u0161ymas",
+        "pl": "[B02.000] - Informacje og\u00f3lne - Opis praktyk, polityk i/lub przysz\u0142ych inicjatyw na rzecz przej\u015bcia na bardziej zr\u00f3wnowa\u017con\u0105 gospodark\u0119",
+        "pt": "[C02.000] - Informa\u00e7\u00f5es gerais - Descri\u00e7\u00e3o das pr\u00e1ticas, pol\u00edticas e/ou iniciativas futuras de transi\u00e7\u00e3o para uma economia mais sustent\u00e1vel"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c03000": {
+      "definition": "[C03.000] - Environment - Greenhouse Gas Emissions Reduction Baseline and Target Year",
+      "labels": {
+        "da": "[C03.000] - Milj\u00f8 - Basis\u00e5r og m\u00e5l\u00e5r for reduktion af drivhusgasudledninger",
+        "de": "[C03.000] - Umwelt - Basisjahr und Zieljahr der Treibhausgas-Reduktionsziele",
+        "es": "[C03.000] - Medio ambiente - A\u00f1o base y a\u00f1o objetivo de reducci\u00f3n de emisiones de gases de efecto invernadero",
+        "fr": "[C03.000] - Environnement - Ann\u00e9e de r\u00e9f\u00e9rence et ann\u00e9e cible pour la r\u00e9duction des \u00e9missions de gaz \u00e0 effet de serre",
+        "it": "[C03.000] - Ambiente - Base e anno-obiettivo per la riduzione delle emissioni di gas a effetto serra",
+        "lt": "[C03.000] \u2013 Aplinkos sritis \u2013 \u0161iltnamio efekt\u0105 sukelian\u010di\u0173 duj\u0173 emisij\u0173 ma\u017einimo baziniai ir tiksliniai metai",
+        "pl": "[C03.000] - \u015arodowisko - Rok bazowy i docelowy redukcji emisji gaz\u00f3w cieplarnianych",
+        "pt": "[C03.000] - Ambiente \u2013 Ano base e ano alvo para redu\u00e7\u00e3o das emiss\u00f5es de gases com efeito de estufa"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c03100": {
+      "definition": "[C03.100] - Environment - Greenhouse Gas Emission Reduction Targets",
+      "labels": {
+        "da": "[C03.100] - Milj\u00f8 - M\u00e5l for reduktion af drivhusgasudledninger",
+        "de": "[C03.100] - Umwelt - Treibhausgas-Reduktionsziele",
+        "es": "[C03.100] - Medio ambiente - Objetivos de reducci\u00f3n de emisiones de gases de efecto invernadero",
+        "fr": "[C03.100] - Environnement - Cibles de r\u00e9duction des \u00e9missions de gaz \u00e0 effet de serre",
+        "it": "[C03.100] - Ambiente - Obiettivi di riduzione delle emissioni di gas a effetto serra",
+        "lt": "[C03.100] \u2013 Aplinkos sritis \u2013 \u0160iltnamio efekt\u0105 sukelian\u010di\u0173 duj\u0173 emisij\u0173 ma\u017einimo tikslai",
+        "pl": "[C03.100] - \u015arodowisko - Cele redukcji emisji gaz\u00f3w cieplarnianych",
+        "pt": "[C03.100] - Ambiente - Metas de redu\u00e7\u00e3o das emiss\u00f5es de gases com efeito de estufa"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c03200": {
+      "definition": "[C03.200] - Environment - Disclosure of list of main actions the entity seeks to achieve its targets",
+      "labels": {
+        "da": "[C03.200] - Milj\u00f8 - Liste over de vigtigste foranstaltninger, som virksomheden s\u00f8ger at gennemf\u00f8re for at n\u00e5 sine m\u00e5l",
+        "de": "[C03.200] \u2013 Umwelt \u2013 Angabe der wesentlichen Ma\u00dfnahmen, die das Unternehmen zur Erreichung seiner Ziele durchzuf\u00fchren beabsichtigt",
+        "es": "[C03.200] - Medio ambiente - Divulgaci\u00f3n de la lista de las acciones principales que la entidad busca llevar a cabo para alcanzar sus objetivos",
+        "fr": "[C03.200] - Environnement - Publication de la liste des principales actions que l'entreprise entend mettre en \u0153uvre pour atteindre ses cibles",
+        "it": "[C03.200] - Ambiente - Comunicazione dell'elenco delle principali azioni che l'impresa intende attuare per conseguire i propri obiettivi",
+        "lt": "[C03.200] \u2013 Aplinkos sritis \u2013 Ataskaitoje atskleid\u017eiamas pagrindini\u0173 veiksm\u0173, kuri\u0173 organizacija siekia pasiekti savo tikslus, s\u0105ra\u0161as",
+        "pl": "[C03.200] - \u015arodowisko - Ujawnienie wykazu g\u0142\u00f3wnych dzia\u0142a\u0144, kt\u00f3re jednostka zamierza wdro\u017cy\u0107, aby osi\u0105gn\u0105\u0107 swoje cele",
+        "pt": "[C03.200] - Ambiente - Divulga\u00e7\u00e3o da lista das principais a\u00e7\u00f5es que a entidade procura executar para alcan\u00e7ar as suas metas"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c03300": {
+      "definition": "[C03.300] - Environment - Transition plan for undertakings operating in high climate impact sectors",
+      "labels": {
+        "da": "[C03.300] - Milj\u00f8 - Omstillingsplan for virksomheder, der opererer i sektorer med stor klimaindvirkning",
+        "de": "[C03.300] - Umwelt - \u00dcbergangsplan f\u00fcr Unternehmen, die in klimaintensiven Sektoren t\u00e4tig sind",
+        "es": "[C03.300] - Medio ambiente - Plan de transici\u00f3n para empresas que operan en sectores de alto impacto clim\u00e1tico",
+        "fr": "[C03.300] - Environnement - Plan de transition pour les entreprises op\u00e9rant dans des secteurs \u00e0 fort impact climatique",
+        "it": "[C03.300] - Ambiente - Piano di transizione per le imprese che operano in settori ad alto impatto climatico",
+        "lt": "[C03.300] \u2013 Aplinkos sritis \u2013 Per\u0117jimo planas \u012fmon\u0117ms, veikian\u010dioms sektoriuose, kuri\u0173 poveikis klimatui yra didelis",
+        "pl": "[C03.300] \u2013 \u015arodowisko \u2013 Plan transformacji dla jednostek prowadz\u0105cych dzia\u0142alno\u015b\u0107 w sektorach o znacznym oddzia\u0142ywaniu na klimat",
+        "pt": "[C03.300] - Ambiente - Plano de transi\u00e7\u00e3o para empresas que operam em setores com elevado impacto clim\u00e1tico"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c04000": {
+      "definition": "[C04.000] - Environment - Climate risks",
+      "labels": {
+        "da": "[C04.000] - Milj\u00f8 - Klimarisici",
+        "de": "[C04.000] - Umwelt - Klimabedingte Risiken",
+        "es": "[C04.000] - Medio ambiente - Riesgos clim\u00e1ticos",
+        "fr": "[C04.000] - Environnement - Risques climatiques",
+        "it": "[C04.000] - Ambiente - Rischi climatici",
+        "lt": "[C04.000] \u2013 Aplinkos sritis \u2013 Klimato rizikos",
+        "pl": "[C04.000] - \u015arodowisko - Ryzyka klimatyczne",
+        "pt": "[C04.000] - Ambiente - Riscos clim\u00e1ticos"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c05000": {
+      "definition": "[C05.000] - Social - Additional (general) workforce characteristics",
+      "labels": {
+        "da": "[C05.000] - Social - Supplerende (generelle) oplysninger om arbejdsstyrken",
+        "de": "[C05.000] \u2013 Sozial \u2013 Zus\u00e4tzliche (allgemeine) Merkmale der Arbeitskr\u00e4fte",
+        "es": "[C05.000] - Social - Caracter\u00edsticas adicionales (generales) de los trabajadores",
+        "fr": "[C05.000] - Social - Caract\u00e9ristiques suppl\u00e9mentaires (g\u00e9n\u00e9rales) du personnel",
+        "it": "[C05.000] \u2013 Sociale \u2013 Altre caratteristiche (generali) della forza lavoro",
+        "lt": "[C05.000] \u2013 Socialin\u0117 sritis \u2013 Papildomi (bendrieji) darbuotoj\u0173 rodikliai",
+        "pl": "[C05.000] - Kwestie spo\u0142eczne - Dodatkowe (og\u00f3lne) cechy zasob\u00f3w pracowniczych",
+        "pt": "C05.000 \u2013 Social \u2013 Caracter\u00edsticas adicionais (gerais) da for\u00e7a de trabalho"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c06000": {
+      "definition": "[C06.000] - Social - Additional own workforce information - Human rights policies and processes",
+      "labels": {
+        "da": "[C06.000] - Social - Supplerende oplysninger om egen arbejdsstyrke - Politikker og processer vedr\u00f8rende menneskerettigheder",
+        "de": "[C06.000] \u2013 Sozial \u2013 Zus\u00e4tzliche Informationen zur eigenen Belegschaft \u2013 Richtlinien f\u00fcr die Achtung der Menschenrechte und diesbez\u00fcgliche Prozesse",
+        "es": "[C06.000] - Social - Informaci\u00f3n adicional sobre el personal propio - Pol\u00edticas y procesos en materia de derechos humanos",
+        "fr": "[C06.000] - Social - Informations suppl\u00e9mentaires sur le personnel - Politiques et proc\u00e9dures en mati\u00e8re de droits de l\u2019homme",
+        "it": "[C06.000] \u2013 Sociale - Altre informazioni sulla forza lavoro propria \u2013 Politiche e procedure in materia di diritti umani",
+        "lt": "[C06.000] - Socialin\u0117 sritis - Papildoma darbuotoj\u0173 informacija - \u017dmogaus teisi\u0173 politika ir procesai",
+        "pl": "[C06.000] - Kwestie spo\u0142eczne - Dodatkowe informacje o w\u0142asnych zasobach pracowniczych - Polityki i procesy dotycz\u0105ce praw cz\u0142owieka",
+        "pt": "[C06.000] - Social - Informa\u00e7\u00f5es adicionais sobre a pr\u00f3pria m\u00e3o-de-obra - Pol\u00edticas e processos em mat\u00e9ria de direitos humanos"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c07000": {
+      "definition": "[C07.000] - Social - Severe negative human rights incidents",
+      "labels": {
+        "da": "[C07.000] - Social - Alvorlige negative menneskerettighedsh\u00e6ndelser",
+        "de": "[C07.000] \u2013 Sozial \u2013 Schwerwiegende Vorf\u00e4lle im Zusammenhang mit Menschenrechten",
+        "es": "[C07.000] - Social - Incidentes graves negativos de derechos humanos",
+        "fr": "[C07.000] - Social  \u2013 Incidents graves en mati\u00e8re de droits de l\u2019homme",
+        "it": "[C07.000] - Sociale - Incidenti gravi in materia di diritti umani",
+        "lt": "[C07.000] - Socialin\u0117 sritis - Svarb\u016bs neigiami \u017emogaus teisi\u0173 pa\u017eeidimai",
+        "pl": "[C07.000] \u2013 Kwestie spo\u0142eczne \u2013 Powa\u017cne negatywne incydenty dotycz\u0105ce praw cz\u0142owieka",
+        "pt": "[C07.000] - Social - Incidentes graves negativos em mat\u00e9ria de direitos humanos"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c08000": {
+      "definition": "[C08.000] - Governance - Revenues derived from activities",
+      "labels": {
+        "da": "[C08.000] - Virksomhedsadf\u00e6rd - Indt\u00e6gter fra bestemte aktiviteter",
+        "de": "[C08.000] \u2013 Governance \u2013 Umsatzerl\u00f6se aus bestimmten T\u00e4tigkeiten und Ausnahme von EU-Referenzwerten",
+        "es": "[C08.000] - Gobernanza - Ingresos derivados de actividades",
+        "fr": "[C08.000] - Gouvernance - Chiffre d'affaires r\u00e9alis\u00e9 \u00e0 partir des activit\u00e9s",
+        "it": "[C08.000] - Governance - Ricavi derivanti da attivit\u00e0",
+        "lt": "[C08.000] - Valdymo sritis - Pajamos, gautos i\u0161 veikl\u0173",
+        "pl": "[C08.000] - \u0141ad korporacyjny - Przychody z dzia\u0142alno\u015bci",
+        "pt": "[C08.000] - Governa\u00e7\u00e3o - R\u00e9ditos provenientes de atividades"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c08100": {
+      "definition": "[C08.100] - Governance - Exclusion from EU benchmarks",
+      "labels": {
+        "da": "[C08.100] - Virksomhedsadf\u00e6rd - Udelukkelse fra EU-benchmarks",
+        "de": "[C08.100] \u2013 Governance \u2013 Ausnahme von EU-Referenzwerten",
+        "es": "[C08.100] - Gobernanza - Exclusi\u00f3n de los \u00edndices de referencia de la UE",
+        "fr": "[C08.100] - Gouvernance - Exclusion des indices de r\u00e9f\u00e9rence de l\u2019Union europ\u00e9enne",
+        "it": "[C08.100] - Governance - Esclusione dagli indici di riferimento dell'UE",
+        "lt": "[G11.100] - Valdymo sritis - Pa\u0161alinimas i\u0161 ES lyginam\u0173j\u0173 etalon\u0173",
+        "pl": "[C08.100] - \u0141ad korporacyjny - wykluczenie z unijnych wska\u017anik\u00f3w referencyjnych",
+        "pt": "[C08.100] - Governa\u00e7\u00e3o - Exclus\u00e3o dos \u00edndices de refer\u00eancia da UE"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-c09000": {
+      "definition": "[C09.000] - Governance - Gender diversity ratio in the governance body",
+      "labels": {
+        "da": "[C09.000] - Virksomhedsadf\u00e6rd - K\u00f8nsfordeling i ledelsesorganet",
+        "de": "[C09.000] \u2013 Governance \u2013 Geschlechtervielfalt im Leitungsorgan",
+        "es": "[C09.000] - Gobernanza - Ratio de diversidad de g\u00e9nero en el \u00f3rgano de gobernanza",
+        "fr": "[C09.000] - Gouvernance - Ratio de mixit\u00e9 au sein de l\u2019organe de gouvernance",
+        "it": "[C09.000] - Governance - Diversit\u00e0 di genere nell'organo di governance",
+        "lt": "[C09.000] \u2013 Valdymo sritis \u2013 Ly\u010di\u0173 \u012fvairov\u0117s rodiklis valdymo organe",
+        "pl": "[C09.000] - \u0141ad korporacyjny - Wska\u017anik zr\u00f3\u017cnicowania organu zarz\u0105dzaj\u0105cego pod wzgl\u0119dem p\u0142ci",
+        "pt": "[C09.000] - Governa\u00e7\u00e3o - R\u00e1cio de diversidade de g\u00e9nero no \u00f3rg\u00e3o de governa\u00e7\u00e3o"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-default-dimensions": {
+      "definition": "[000.000] Default Dimensions"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2025-07-30/role-other": {
+      "definition": "[D99.000] - Other and/or entity specific information",
+      "labels": {
+        "da": "[D99.000] - Anden og/eller virksomhedsspecifik information",
+        "de": "[D99.000] \u2013 Governance \u2013 Weitere und/oder unternehmensspezifische Informationen",
+        "es": "[ D99.000] - Otra y/o informaci\u00f3n espec\u00edfica de la entidad",
+        "fr": "[D99.000] - Autres informations et/ou informations sp\u00e9cifiques \u00e0 l\u2019entit\u00e9",
+        "it": "[D99.000] - Altre informazioni e/o specifiche per soggetto",
+        "lt": "[D99.000] - Kita ir (arba) \u012fmonei specifin\u0117 informacija",
+        "pl": "[D99.000] - Inne i/lub informacje specyficzne dla jednostki",
+        "pt": "[D99.000] - Outra informa\u00e7\u00e3o e/ou informa\u00e7\u00e3o espec\u00edfica da empresa"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/waste/2014-12-18/waste/role-100": {
+      "definition": "Waste List"
+    }
+  },
   "xs_elements": {
     "vsme:TYP": {
       "baseDataType": "xs:string",

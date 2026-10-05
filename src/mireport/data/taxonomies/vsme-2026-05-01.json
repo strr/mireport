@@ -85021,6 +85021,739 @@
       "role": "https://xbrl.org/2022/role/property"
     }
   ],
+  "roles": {
+    "http://www.xbrl.org/2008/role/link": {},
+    "http://www.xbrl.org/taxonomy/int/country/roles/domain": {
+      "definition": "Country List"
+    },
+    "https://xbrl.efrag.org/taxonomy/nace/2026-05-01/roles/domain": {
+      "definition": "NACE List"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/defaults-99000": {
+      "definition": "[99000] Default Dimensions"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99001": {
+      "definition": "[99001] Enumeration - Basis for preparation"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99002": {
+      "definition": "[99002] Enumeration - List of disclosures"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99003": {
+      "definition": "[99003] Enumeration - Undertakings Legal Form"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99005": {
+      "definition": "[99005] Enumeration - Type of number of employees"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99007": {
+      "definition": "[99007] Enumeration - Type of practice, policy and future initiative"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99008": {
+      "definition": "[99008] Enumeration - Sustainability issues addressed"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99009": {
+      "definition": "[99009] Enumeration - Type of content covered by the code of conduct or human rights policy for its own workforce"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99010": {
+      "definition": "[99010] Enumeration - Basis for reporting"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/enum-99014": {
+      "definition": "[99014] Enumeration - Employee counting methodology"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-100": {
+      "definition": "[1000] Introduction and general, and/or entity specific information"
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-101": {
+      "definition": "[1010] B1 - General information - Basis for Preparation",
+      "labels": {
+        "da": "[1010] B1 - Grundl\u00e6ggende oplysninger - Grundlag for udarbejdelse",
+        "de": "[1010] B1 - Allgemeine Informationen - Grundlagen f\u00fcr die Erstellung",
+        "es": "[1010] B1 - Informaci\u00f3n general - Base para la elaboraci\u00f3n",
+        "fr": "[1010] B1 - Informations g\u00e9n\u00e9rales - Base de pr\u00e9paration",
+        "ga": "[1010] B1 - Faisn\u00e9is ghinear\u00e1lta - An Bun\u00fas leis an ullmh\u00fa",
+        "it": "[1010] B1 - Informazioni generali - Criteri per la redazione",
+        "lt": "[1010] B1 - Bendroji informacija - Parengimo pagrindas",
+        "nl": "[1010] B1 - Algemene informatie - Grondslagvoor het opstellen van informatie",
+        "pl": "[1010] B1 - Informacje og\u00f3lne - Podstawa sporz\u0105dzenia",
+        "pt": "[1010] B1 - Informa\u00e7\u00e3o geral - Base para Prepara\u00e7\u00e3o",
+        "sl": "[1010] B1 - Splo\u0161ne informacije - Podlaga za pripravo"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-102": {
+      "definition": "[1020] B1 - General information - List of subsidiaries",
+      "labels": {
+        "da": "[1020] B1 - Generel information - Liste over datterselskaber",
+        "de": "[1020] B1 - Allgemeine Informationen - Liste der Tochterunternehmen",
+        "es": "[1020] B1 - Informaci\u00f3n general - Lista de filiales",
+        "fr": "[1020] B1 - Informations g\u00e9n\u00e9rales - Liste des filiales",
+        "ga": "[1020] B1 - Faisn\u00e9is ghinear\u00e1lta - Liosta fochuideachta\u00ed",
+        "it": "[1020] B1 - Informazioni generali - Elenco delle imprese figlie",
+        "lt": "[1020] B1 - Bendroji informacija - Dukterini\u0173 \u012fmoni\u0173 s\u0105ra\u0161as",
+        "nl": "[1020] B1 - Algemene informatie - Lijst van dochterondernemingen",
+        "pl": "[1020] B1 - Informacje og\u00f3lne - Wykaz jednostek zale\u017cnych",
+        "pt": "[1020] B1 - Informa\u00e7\u00e3o geral - Lista de subsidi\u00e1rias",
+        "sl": "[1020] B1 - Splo\u0161ne informacije - Seznam odvisnih dru\u017eb"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-103": {
+      "definition": "[1030] B1 - General information - List of sites",
+      "labels": {
+        "da": "[1030] B1 - Generel information - Liste over lokationer",
+        "de": "[1030] B1 - Allgemeine Informationen - Liste der Standorte",
+        "es": "[1030] B1 - Informaci\u00f3n general - Lista de emplazamientos",
+        "fr": "[1030] B1 - Informations g\u00e9n\u00e9rales - Liste des sites",
+        "ga": "[1030] B1 - Faisn\u00e9is ghinear\u00e1lta - Liosta su\u00edomhanna",
+        "it": "[1030] B1 - Informazioni generali - Elenco dei siti",
+        "lt": "[1030] B1 - Bendroji informacija - Objekt\u0173 s\u0105ra\u0161as",
+        "nl": "[1030] B1 - Algemene informatie - Lijst van vestigingen",
+        "pl": "[1030] B1 - Informacje og\u00f3lne - Lista lokalizacji",
+        "pt": "[1030] B1 - Informa\u00e7\u00f5es gerais - Lista de locais",
+        "sl": "[1030] B1 - Splo\u0161ne informacije - Seznam lokacij"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-104": {
+      "definition": "[1040] B2 - General information - Practices, policies and/or future initiatives for transitioning towards a more sustainable economy",
+      "labels": {
+        "da": "[1040] B2 - Generelle oplysninger - Praksisser, politikker og/eller fremtidige initiativer for omstilling til en mere b\u00e6redygtig \u00f8konomi",
+        "de": "[1040] B2 - Allgemeine Informationen - Verfahrensweisen, Richtlinien und/oder k\u00fcnftige Initiativen f\u00fcr den \u00dcbergang zu einer nachhaltigeren Wirtschaft",
+        "es": "[1040] B2 - Informaci\u00f3n general - Pr\u00e1cticas, pol\u00edticas o iniciativas futuras para la transici\u00f3n hacia una econom\u00eda m\u00e1s sostenible",
+        "fr": "[1040] B2 - Informations g\u00e9n\u00e9rales - Pratiques, politiques et/ou initiatives futures en vue de la transition vers une \u00e9conomie plus durable",
+        "ga": "[1040] B2 - Faisn\u00e9is ghinear\u00e1lta - Cleachtais, beartais agus tionscnaimh amach anseo chun aistri\u00fa i dtreo geilleagar n\u00edos inbhuanaithe",
+        "it": "[1040] B2 - Informazioni generali - Pratiche, politiche e/o iniziative future per la transizione verso un'economia pi\u00f9 sostenibile",
+        "lt": "[1040] B2 - Bendroji informacija - Praktikos, politikos ir (arba) b\u016bsimos iniciatyvos, skirtos pereiti prie tvaresn\u0117s ekonomikos",
+        "nl": "[1040] B2 - Algemene informatie - Praktijken, beleid en/of toekomstige initiatieven voor de overgang naar een duurzamere economie",
+        "pl": "[1040] B2 - Informacje og\u00f3lne - Praktyki, polityki i/lub przysz\u0142e inicjatywy na rzecz przej\u015bcia na bardziej zr\u00f3wnowa\u017con\u0105 gospodark\u0119",
+        "pt": "[1040] B2 - Informa\u00e7\u00f5es gerais - Pr\u00e1ticas, pol\u00edticas e/ou iniciativas futuras de transi\u00e7\u00e3o para uma economia mais sustent\u00e1vel",
+        "sl": "[1040] B2 - Splo\u0161ne informacije - Prakse, politike in/ali prihodnje pobude za prehod na bolj trajnostno gospodarstvo"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-105": {
+      "definition": "[1050] B2 - General information - Cooperative specific disclosures",
+      "labels": {
+        "da": "[1050] B2 - Generelle oplysninger - Specifikke oplysninger for kooperativer",
+        "de": "[1050] B2 - Allgemeine Informationen - Genossenschaftsspezifische Angaben",
+        "es": "[1050] B2 - Informaci\u00f3n general - Divulgaciones espec\u00edficas de cooperativas",
+        "fr": "[1050] B2 - Informations g\u00e9n\u00e9rales - Informations sp\u00e9cifiques aux coop\u00e9ratives",
+        "ga": "[1050] B2 - Faisn\u00e9is ghinear\u00e1lta - Nochta\u00ed sonrach do chomharchumann",
+        "it": "[1050] B2 - Informazioni generali - Informative specifiche per le cooperative",
+        "lt": "[1050] B2 - Bendroji informacija - Kooperatyvams b\u016bdingi atskleidimai",
+        "nl": "[1050] B2 - Algemene informatie - Co\u00f6peratie specifieke toelichtingen",
+        "pl": "[1050] B2 - Informacje og\u00f3lne - Szczeg\u00f3lne ujawnienia dotycz\u0105ce sp\u00f3\u0142dzielni",
+        "pt": "[1050] B2 - Informa\u00e7\u00f5es gerais - Divulga\u00e7\u00f5es espec\u00edficas para cooperativas",
+        "sl": "[1050] B2 - Splo\u0161ne informacije - Razkritja, specifi\u010dna za zadruge"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-106": {
+      "definition": "[1060] C1 - General information - Strategy: Business Model and Sustainability \u2013 Related Initiatives",
+      "labels": {
+        "da": "[1060] C1 - Generelle oplysninger - Strategi: Forretningsmodel og b\u00e6redygtighedsrelaterede initiativer",
+        "de": "[1060] C1 - Allgemeine Informationen - Strategie: Gesch\u00e4ftsmodell und Nachhaltigkeit - zugeh\u00f6rige Initiativen",
+        "es": "[1060] C1 - Informaci\u00f3n general - Estrategia: Modelo de negocio y sostenibilidad - Iniciativas relacionadas",
+        "fr": "[1060] C1 - C1 - Strat\u00e9gie : mod\u00e8le \u00e9conomique et durabilit\u00e9 - initiatives associ\u00e9es",
+        "ga": "[1060] C1 - Faisn\u00e9is Ghinear\u00e1lta - Strait\u00e9is: Samhail Ghn\u00f3 agus Inbhuanaitheacht - Tionscnaimh Ghaolmhara",
+        "it": "[1060] C1 - Informazioni generali - Strategia: Modello aziendale e iniziative connesse alla sostenibilit\u00e0",
+        "lt": "[1060] C1 - Bendroji informacija - Strategija: Verslo modelis ir su tvarumu susijusios iniciatyvos",
+        "nl": "[1060] C1 - Algemene informatie - Strategie: Businessmodel en duurzaamheid - Gerelateerde initiatieven",
+        "pl": "[1060] C1 - Informacje og\u00f3lne - Strategia: model biznesowy i zr\u00f3wnowa\u017cony rozw\u00f3j - powi\u0105zane inicjatywy",
+        "pt": "[1060] C1 - Informa\u00e7\u00f5es gerais - Estrat\u00e9gia: Modelo de neg\u00f3cio e Sustentabilidade - Iniciativas conexas",
+        "sl": "[1060] C1 - Splo\u0161ne informacije - Strategija: poslovni model in pobude, povezane s trajnostnostjo"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-107": {
+      "definition": "[1045] C2 - General information - Description of practices, policies and/or future initiatives for transitioning towards a more sustainable economy",
+      "labels": {
+        "da": "[1045] C2 - Generelle oplysninger - Beskrivelse af praksisser, politikker og/eller fremtidige initiativer for omstillingen til en mere b\u00e6redygtig \u00f8konomi",
+        "de": "[1045] C2 - Allgemeine Informationen - Beschreibung von Verfahrensweisen, Richtlinien und/oder k\u00fcnftigen Initiativen f\u00fcr den \u00dcbergang zu einer nachhaltigeren Wirtschaft",
+        "es": "[1045] C2 - Informaci\u00f3n general - Descripci\u00f3n de pr\u00e1cticas, pol\u00edticas y/o iniciativas futuras para la transici\u00f3n hacia una econom\u00eda m\u00e1s sostenible",
+        "fr": "[1045] C2 - Informations g\u00e9n\u00e9rales - Description des pratiques, politiques et/ou initiatives futures pour la transition vers une \u00e9conomie plus durable",
+        "ga": "[1045] C2 - Faisn\u00e9is ghinear\u00e1lta - Strait\u00e9is: Tuairisc ar chleachtais, beartais agus tionscnaimh amach anseo chun aistri\u00fa i dtreo geilleagar n\u00edos inbhuanaithe",
+        "it": "[1045] C2 - Informazioni generali - Descrizione delle pratiche, delle politiche e/o delle iniziative future per la transizione verso un'economia pi\u00f9 sostenibile",
+        "lt": "[1045] C2 - Bendroji informacija - Praktik\u0173, politik\u0173 ir (arba) b\u016bsim\u0173 iniciatyv\u0173, skirt\u0173 pereiti prie tvaresn\u0117s ekonomikos, apra\u0161ymas",
+        "nl": "[1045] C2 - Algemene informatie: Beschrijving van praktijken, beleid en/of toekomstige initiatieven voor de overgang naar een meer duurzame economie",
+        "pl": "[1045] C2 - Informacje og\u00f3lne - Opis praktyk, polityk i/lub przysz\u0142ych inicjatyw na rzecz przej\u015bcia na bardziej zr\u00f3wnowa\u017con\u0105 gospodark\u0119",
+        "pt": "[1045] C2 - Informa\u00e7\u00f5es gerais - Descri\u00e7\u00e3o das pr\u00e1ticas, pol\u00edticas e/ou iniciativas futuras de transi\u00e7\u00e3o para uma economia mais sustent\u00e1vel",
+        "sl": "[1045] C2 - Splo\u0161ne informacije - Opis praks, politik in/ali prihodnjih pobud za prehod na bolj trajnostno gospodarstvo"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-108": {
+      "definition": "[1080] B3 - Environment - Total Energy Consumption",
+      "labels": {
+        "da": "[1080] B3 - Milj\u00f8 - Samlet energiforbrug",
+        "de": "[1080] B3 - Umwelt - Gesamtenergieverbrauch",
+        "es": "[1080] B3 - Medio ambiente - Consumo total de energ\u00eda",
+        "fr": "[1080] B3 - Environnement - Consommation d'\u00e9nergie totale",
+        "ga": "[1080] B3 - Comhshaol - Tomhaltas fuinnimh ioml\u00e1n",
+        "it": "[1080] B3 - Ambiente - Totale Consumo di Energia",
+        "lt": "[1080] B3 - Aplinkos sritis - Bendras energijos suvartojimas",
+        "nl": "[1080] B3 - Milieu - Totale energieverbruik",
+        "pl": "[1080] B3 - \u015arodowisko - Ca\u0142kowite zu\u017cycie energii",
+        "pt": "[1080] B3 - Ambiente - Consumo Total de Energia",
+        "sl": "[1080] B3 - Okolje - Skupna poraba energije"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-109": {
+      "definition": "[1090] B3 - Environment - Breakdown of energy consumption",
+      "labels": {
+        "da": "[1090] B3 - Milj\u00f8 - Opdeling af energiforbrug",
+        "de": "[1090] B3 - Umwelt - Aufschl\u00fcsselung des Energieverbrauchs",
+        "es": "[1090] B3 - Medio ambiente - Desglose del consumo de energ\u00eda",
+        "fr": "[1090] B3 - Environnement - Ventilation de la consommation d'\u00e9nergie",
+        "ga": "[1090] B3 - Comhshaol - Miondeal\u00fa ar thomhaltas fuinnimh ioml\u00e1n",
+        "it": "[1090] B3 - Ambiente - Ripartizione del consumo di energia",
+        "lt": "[1090] B3 - Aplinkos sritis - Energijos suvartojimo suskirstymas",
+        "nl": "[1090] B3 - Milieu - Uitsplitsing van energieverbruik",
+        "pl": "[1090] B3 - \u015arodowisko - Podzia\u0142 zu\u017cycia energii",
+        "pt": "[1090] B3 - Ambiente - Discrimina\u00e7\u00e3o do consumo de energia",
+        "sl": "[1090] B3 - Okolje - Raz\u010dlenitev porabe energije"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-110": {
+      "definition": "[1100] B3 - Environment - Estimated Greenhouse Gas Emissions",
+      "labels": {
+        "da": "[1100] B3 - Milj\u00f8 - Ansl\u00e5ede drivhusgasudledninger",
+        "de": "[1100] B3 - Umwelt - Gesch\u00e4tzte Treibhausgasemissionen",
+        "es": "[1100] B3 - Medio ambiente - Emisiones brutas estimadas de gases de efecto invernadero",
+        "fr": "[1100] B3 - Environnement - Estimation des \u00e9missions de gaz \u00e0 effet de serre",
+        "ga": "[1100] B3 - Comhshaol - Meastach\u00e1in ar asta\u00edochta\u00ed g\u00e1s ceaptha teasa",
+        "it": "[1100] B3 - Ambiente - Emissioni stimate di gas a effetto serra",
+        "lt": "[1100] B3 - Aplinkos sritis - Apskai\u010diuotas i\u0161metam\u0173 \u0161iltnamio efekt\u0105 sukelian\u010di\u0173 duj\u0173 kiekis",
+        "nl": "[1100] B3 - Milieu - Geschatte broeikasgasemissies",
+        "pl": "[1100] B3 - \u015arodowisko - Szacunkowa emisja gaz\u00f3w cieplarnianych",
+        "pt": "[1100] B3 - Ambiente - Emiss\u00f5es estimadas de Gases de Efeito de Estufa\"",
+        "sl": "[1100] B3 - Okolje - Ocenjene emisije toplogrednih plinov"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-111": {
+      "definition": "[1110] B3 - Environment - Greenhouse Gas Emissions intensity",
+      "labels": {
+        "da": "[1110] B3 - Milj\u00f8 -  Drivhusgasintensitet",
+        "de": "[1110] B3 - Umwelt - Treibhausgas-Emissionsintensit\u00e4t",
+        "es": "[1110] B3 - Medio ambiente - Intensidad de emisiones de gases de efecto invernadero",
+        "fr": "[1110] B3 - Environnement - Intensit\u00e9 des \u00e9missions de gaz \u00e0 effet de serre",
+        "ga": "[1110] B3 - Comhshaol - D\u00e9ine asta\u00edochta\u00ed g\u00e1s ceaptha teasa",
+        "it": "[1110] B3 - Ambiente - Intensit\u00e0 delle emissioni di gas a effetto serra",
+        "lt": "[1110] B3 - Aplinkos sritis - \u0161iltnamio efekt\u0105 sukelian\u010di\u0173 duj\u0173 intensyvumas",
+        "nl": "[1110] B3 - Milieu - Intensiteit van broeikasgasemissies",
+        "pl": "[1110] B3 - \u015arodowisko - Intensywno\u015b\u0107 emisji gaz\u00f3w cieplarnianych",
+        "pt": "[1110] B3 - Ambiente - Intensidade das Emiss\u00f5es de Gases com Efeito de Estufa",
+        "sl": "[1110] B3 - Okolje - Intenzivnost emisij toplogrednih plinov"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-112": {
+      "definition": "[1120] B4 - Environment - Pollution of air, water and soil: availability of public disclosure",
+      "labels": {
+        "da": "[1120] B4 - Milj\u00f8 - Forurening af luft, vand og jord: tilg\u00e6ngelighed af offentligg\u00f8relse",
+        "de": "[1120] B4 - Umwelt - Luft-, Wasser- und Bodenverschmutzung; Verf\u00fcgbarkeit von \u00f6ffentlichen Angaben",
+        "es": "[1120] B4 - Medio ambiente - Contaminaci\u00f3n del aire, agua y suelo: disponibilidad de divulgaci\u00f3n p\u00fablica",
+        "fr": "[1120] B4 - Environnement - Pollution de l\u2019air, de l\u2019eau et des sols : disponibilit\u00e9 de la divulgation publique",
+        "ga": "[1120] B4 - Comhshaol - Truailli\u00fa an aeir, an uisce agus na hithreach: f\u00e1il ar nochtadh poibl\u00ed",
+        "it": "[1120] B4 - Ambiente - Inquinamento di aria, acqua e suolo: informativa disponibile al pubblico",
+        "lt": "[1120] B4 - Aplinkos sritis - Oro, vandens ir dirvo\u017eemio tar\u0161a: vie\u0161o atskleidimo prieinamumas",
+        "nl": "[1120] B4 - Milieu - Verontreiniging van lucht, water en bodem: beschikbaarheid van publieke rapportage",
+        "pl": "[1120] B4 - \u015arodowisko - Zanieczyszczenie powietrza, wody i gleby: dost\u0119pno\u015b\u0107 publicznego ujawnienia informacji",
+        "pt": "[1120] B4 - Ambiente - Polui\u00e7\u00e3o do ar, \u00e1gua e solo: disponibilidade de divulga\u00e7\u00f5es p\u00fablicas",
+        "sl": "[1120] B4 - Okolje - Onesna\u017eevanje zraka, vode in prsti: razpolo\u017eljivost javnih razkritij"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-113": {
+      "definition": "[1130] B4 - Environment - Pollution of air, water and soil: amount of emissions",
+      "labels": {
+        "da": "[1130] B4 - Milj\u00f8 - Forurening af luft, vand og jord: m\u00e6ngde af udledninger",
+        "de": "[1130] B4 - Umwelt - Luft-, Wasser- und Bodenverschmutzung; Emissionsmenge",
+        "es": "[1130] B4 - Medio ambiente - Contaminaci\u00f3n del aire, agua y suelo: cantidad de emisiones",
+        "fr": "[1130] B4 - Environnement - Pollution de l\u2019air, de l\u2019eau et des sols : quantit\u00e9 des \u00e9missions",
+        "ga": "[1130] B4 - Timpeallacht - Truailli\u00fa an aeir, an uisce agus na hithreach: m\u00e9id na n-asta\u00edochta\u00ed",
+        "it": "[1130] B4 - Ambiente - Inquinamento di aria, acqua e suolo: quantit\u00e0 delle emissioni",
+        "lt": "[1130] B4 - Aplinkos sritis - Oro, vandens ir dirvo\u017eemio tar\u0161a: i\u0161metam\u0173 ter\u0161al\u0173 kiekis",
+        "nl": "[1130] B4 - Milieu -  Verontreiniging van lucht, water en bodem: hoeveelheid emissies",
+        "pl": "[1130] B4 - \u015arodowisko - Zanieczyszczenie powietrza, wody i gleby: ilo\u015b\u0107 emisji",
+        "pt": "[1130] B4 - Ambiente - Polui\u00e7\u00e3o do ar, \u00e1gua e solo: quantidade de emiss\u00f5es",
+        "sl": "[1130] B4 - Okolje - Onesna\u017eevanje zraka, vode in prsti: koli\u010dina emisij"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-114": {
+      "definition": "[1140] B5 - Environment - Sites in biodiversity sensitive areas",
+      "labels": {
+        "da": "[1140] B5 - Milj\u00f8 - Lokationer i biodiversitetsf\u00f8lsomme omr\u00e5der",
+        "de": "[1140] B5 - Umwelt - Standorte in Gebieten mit schutzbed\u00fcrftiger Biodiversit\u00e4t",
+        "es": "[1140] B5 - Medio ambiente - Emplazamientos en \u00e1reas sensibles para la biodiversidad",
+        "fr": "[1140] B5 - Environnement - Sites situ\u00e9s dans des zones sensibles sur le plan de la biodiversit\u00e9",
+        "ga": "[1140] B5 - Comhshaol - L\u00e1ithre\u00e1in i gceantair at\u00e1 \u00edogair \u00f3 thaobh na bith\u00e9ags\u00falachta de",
+        "it": "[1140] B5 - Ambiente - Siti ubicati all'interno di un'area sensibile sotto il profilo della biodiversit\u00e0",
+        "lt": "[1140] B5 - Aplinkos sritis - objektai biologinei \u012fvairovei jautriose teritorijose",
+        "nl": "[1140] B5 - Milieu - Vestigingen in biodiversiteitsgevoelige gebieden",
+        "pl": "[1140] B5 - \u015arodowisko - Lokalizacje na obszarach wra\u017cliwych pod wzgl\u0119dem bior\u00f3\u017cnorodno\u015bci",
+        "pt": "[1140] B5 - Ambiente - Locais em \u00e1reas sens\u00edveis \u00e0 biodiversidade",
+        "sl": "[1140] B5 - Okolje - Lokacije na obmo\u010djih z ob\u010dutljivo biotsko raznovrstnostjo"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-115": {
+      "definition": "[1150] B5 - Environment - Biodiversity - on Land-use",
+      "labels": {
+        "da": "[1150] B5 - Milj\u00f8 - Biodiversitet - p\u00e5 Arealforbrug",
+        "de": "[1150] B5 - Umwelt - Biodiversit\u00e4t - Fl\u00e4chennutzung",
+        "es": "[1150] B5 - Medio Ambiente - Biodiversidad - en uso de la tierra",
+        "fr": "[1150] B5 - Environnement - Biodiversit\u00e9 - Utilisation des terres",
+        "ga": "[1150] B5 - Comhshaol - Bith\u00e9ags\u00falacht - ar \u00das\u00e1id Tal\u00fan",
+        "it": "[1150] B5 - Ambiente - Biodiversit\u00e0 - sull'uso del suolo",
+        "lt": "[1150] B5 - Aplinkos sritis - \u012evairov\u0117 - \u017eem\u0117s naudojimas",
+        "nl": "[1150] B5 - Milieu - Biodiversiteit - gebruik van land",
+        "pl": "[1150] B5 - \u015arodowisko - Bior\u00f3\u017cnorodno\u015b\u0107 - zwi\u0105zana z u\u017cytkowaniem grunt\u00f3w",
+        "pt": "[1150] B5 - Ambiente - Biodiversidade - sobre Utiliza\u00e7\u00e3o do Solo",
+        "sl": "[1150] B5 - Okolje - Biotska raznovrstnost - o rabi zemlji\u0161\u010d"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-116": {
+      "definition": "[1160] B6 - Environment - Water Withdrawal",
+      "labels": {
+        "da": "[1160] B6 - Milj\u00f8 - Vandudtag",
+        "de": "[1160] B6 - Umwelt - Wasserentnahme",
+        "es": "[1160] B6 - Medio Ambiente - Extracci\u00f3n de Agua",
+        "fr": "[1160] B6 - Environnement - Pr\u00e9l\u00e8vements d'eau",
+        "ga": "[1160] B6 - Comhshaol - Aistarraingt Uisce",
+        "it": "[1160] B6 - Ambiente - Prelievo idrico",
+        "lt": "[1160] B6 -  Aplinkos sritis - Vandens i\u0161gavimas",
+        "nl": "[1160] B6 - Milieu - Wateronttrekking",
+        "pl": "[1160] B6 - \u015arodowisko - Pob\u00f3r wody",
+        "pt": "[1160] B6 - Ambiente - Capta\u00e7\u00e3o de \u00c1gua",
+        "sl": "[1160] B6 - Okolje - Odvzem vode"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-117": {
+      "definition": "[1170] B6 - Environment - Water Consumption",
+      "labels": {
+        "da": "[1170] B6 - Milj\u00f8 - Vandforbrug",
+        "de": "[1170] B6 - Umwelt - Wasserverbrauch",
+        "es": "[1170] B6 - Medio ambiente - Consumo de agua",
+        "fr": "[1170] B6 - Environnement - Consommation d\u2019eau",
+        "ga": "[1170] B6 - Comhshaol - Tomhaltas Uisce",
+        "it": "[1170] B6 - Ambiente - Consumo idrico",
+        "lt": "[1170] B6 - Aplinkos sritis - Vandens suvartojimas",
+        "nl": "[1170] B6 - Milieu - Waterverbruik",
+        "pl": "[1170] B6 - \u015arodowisko - Zu\u017cycie wody",
+        "pt": "[1170] B6 - Ambiente - Consumo de \u00c1gua",
+        "sl": "[1170] B6 - Okolje - Poraba vode"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-118": {
+      "definition": "[1180] B7 - Environment - Description of circular economy principles",
+      "labels": {
+        "da": "[1180] B7 - Milj\u00f8 - Beskrivelse af principper for cirkul\u00e6r \u00f8konomi",
+        "de": "[1180] B7 - Umwelt - Beschreibung der Grunds\u00e4tze der Kreislaufwirtschaft",
+        "es": "[1180] B7 - Medio ambiente - Descripci\u00f3n de los principios de la econom\u00eda circular",
+        "fr": "[1180] B7 - Environnement - Description des principes de l'\u00e9conomie circulaire",
+        "ga": "[1180] B7 - Comhshaol - Tuairisc i nd\u00e1il le prionsabail an gheilleagair chiorclaigh",
+        "it": "[1180] B7 - Ambiente - Descrizione dei principi dell'economia circolare",
+        "lt": "[1180] B7 - Aplinkos sritis - Apra\u0161ymas apie \u017eiedin\u0117s ekonomikos principus",
+        "nl": "[1180] B7 - Milieu - Beschrijving van de principes van de circulaire economie",
+        "pl": "[1180] B7 - \u015arodowisko - Opis zasad gospodarki o obiegu zamkni\u0119tym",
+        "pt": "[1180] B7 - Ambiente - Descri\u00e7\u00e3o dos princ\u00edpios da economia circular",
+        "sl": "[1180] B7 - Okolje - Opis na\u010del kro\u017enega gospodarstva"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-119": {
+      "definition": "[1190] B7 - Environment - Breakdown of waste by type",
+      "labels": {
+        "da": "[1190] B7 - Milj\u00f8 - Opdeling af affald efter type",
+        "de": "[1190] B7 - Umwelt - Aufschl\u00fcsselung nach Art des Abfalls",
+        "es": "[1190] B7 - Medio ambiente - Desglose de residuos por tipo",
+        "fr": "[1190] B7 - Environnement - Ventilation des d\u00e9chets par type",
+        "ga": "[1190] B7 - Comhshaol - Miondeal\u00fa ar chine\u00e1l dramha\u00edola",
+        "it": "[1190] B7 - Ambiente - Ripartizione dei rifiuti per tipo",
+        "lt": "[1190] B7 - Aplinkos sritis - Atliek\u0173 suskirstymas pagal tip\u0105",
+        "nl": "[1190] B7 - Milieu -  Uitsplitsing van afval naar type",
+        "pl": "[1190] B7 - \u015arodowisko - Podzia\u0142 odpad\u00f3w wed\u0142ug rodzaju",
+        "pt": "[1190] B7 - Ambiente - Discrimina\u00e7\u00e3o dos res\u00edduos por tipo",
+        "sl": "[1190] B7 - Okolje - Raz\u010dlenitev odpadkov po vrstah"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-120": {
+      "definition": "[1200] B7 - Environment - Total Hazardous and Non-Hazardous waste",
+      "labels": {
+        "da": "[1200] B7 - Milj\u00f8 - Samlet m\u00e6ngde farligt og ikke-farligt affald",
+        "de": "[1200] B7 - Umwelt - Gesamtaufkommen gef\u00e4hrlicher Abf\u00e4lle",
+        "es": "[1200] B7-  Medio ambiente - Residuos totales peligrosos y no peligrosos",
+        "fr": "[1200] B7 - Environnement - Total des d\u00e9chets dangereux et non dangereux",
+        "ga": "[1200] B7 - Comhshaol - Ioml\u00e1n dramha\u00edola at\u00e1 guaiseach agus neamhghuaiseach",
+        "it": "[1200] B7 - Ambiente - Totale rifiuti pericolosi e non pericolosi",
+        "lt": "[1200] B7 - Aplinkos sritis - Bendras pavojing\u0173 ir nepavojing\u0173 atliek\u0173 kiekis",
+        "nl": "[1200] B7 - Milieu - Totale hoeveelheid gevaarlijk en niet-gevaarlijk afval",
+        "pl": "[1200] B7 - \u015arodowisko - Ca\u0142kowita ilo\u015b\u0107 odpad\u00f3w niebezpiecznych i odpad\u00f3w innych ni\u017c niebezpieczne",
+        "pt": "[1200] B7 - Ambiente - Total de Res\u00edduos Perigosos e N\u00e3o Perigosos",
+        "sl": "[1200] B7 - Okolje - Skupna koli\u010dina nevarnih in nenevarnih odpadkov"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-121": {
+      "definition": "[1210] B7 - Environment - Breakdown of annual mass-flow of relevant materials used by the undertaking",
+      "labels": {
+        "da": "[1210] B7 - Milj\u00f8 - Opdeling af den \u00e5rlige massestr\u00f8m af relevante materialer anvendt af virksomheden",
+        "de": "[1210] B7 - Umwelt - Aufschl\u00fcsselung des j\u00e4hrlichen Massenstroms der vom Unternehmen verwendeten relevanten Materialien",
+        "es": "[1210] B7 - Medio Ambiente - Desglose del flujo de masa anual de materiales relevantes utilizados por la empresa",
+        "fr": "[1210] B7 - Environnement - Ventilation annuelle du flux massique des mati\u00e8res pertinentes utilis\u00e9es par l\u2019entreprise",
+        "ga": "[1210] B7 -  Comhshaol - Miondeal\u00fa ar mhais-sreabhadh bliant\u00fail d\u2019\u00e1bhair \u00e1bhartha a \u00fas\u00e1idtear ag an ngn\u00f3thas",
+        "it": "[1210] B7 - Ambiente - Ripartizione del flusso di massa annuo dei materiali pertinenti utilizzati dall'impresa",
+        "lt": "[1210] B7 - Aplinkos sritis - Metinio reik\u0161ming\u0173 med\u017eiag\u0173, kurias naudoja \u012fmon\u0117, mas\u0117s srauto pasiskirstymas",
+        "nl": "[1210] B7 - Milieu - Uitsplitsing van de jaarlijkse massastroom van relevante materialen gebruikt door de onderneming",
+        "pl": "[1210] B7 - \u015arodowisko - Podzia\u0142 rocznego przep\u0142ywu masy istotnych materia\u0142\u00f3w wykorzystywanych przez jednostk\u0119",
+        "pt": "[1210] B7 - Ambiente - Desagrega\u00e7\u00e3o do fluxo anual de massa dos materiais relevantes utilizados pela empresa",
+        "sl": "[1210] B7 - Okolje - Raz\u010dlenitev letnega masnega toka zadevnih materialov, ki jih uporablja podjetje"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-122": {
+      "definition": "[1220] B7 - Environment - Total annual mass-flow of materials used by the undertaking",
+      "labels": {
+        "da": "[1220] B7 - Milj\u00f8 - Samlet \u00e5rlig massestr\u00f8m af materialer brugt af virksomheden",
+        "de": "[1220] B7 - Umwelt - Gesamter j\u00e4hrlicher Massenstrom der vom Unternehmen verwendeten Materialien",
+        "es": "[1220] B7 - Medio ambiente - Flujo de masa anual total de materiales usados por la empresa",
+        "fr": "[1220] B7 - Environnement - Flux massique annuel total des mati\u00e8res utilis\u00e9es par l'entreprise",
+        "ga": "[1220] B7 - Comhshaol - Mais-sreabhadh ioml\u00e1n bliant\u00fail d'\u00e1bhair a \u00fas\u00e1idtear ag an ng\u00f3thas",
+        "it": "[1220] B7 - Ambiente - Totale flusso di massa annuo dei materiali utilizzati dall'impresa",
+        "lt": "[1220] B7 - Aplinkos sritis - Metinis visos \u012fmon\u0117s naudojam\u0173 med\u017eiag\u0173 mas\u0117s srautas",
+        "nl": "[1220] B7 - Milieu - Totale jaarlijkse massastroom van materialen gebruikt door de onderneming",
+        "pl": "[1220] B7 - \u015arodowisko - Ca\u0142kowity roczny przep\u0142yw masowy materia\u0142\u00f3w u\u017cywanych przez jednostk\u0119",
+        "pt": "[1220] B7 - Ambiente - Fluxo anual total de massa dos materiais utilizados pela empresa",
+        "sl": "[1220] B7 - Okolje - Skupni letni masni tok materialov, ki jih uporablja podjetje"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-123": {
+      "definition": "[1230] C3 - Environment - Greenhouse Gas Emissions Reduction Baseline and Target Year",
+      "labels": {
+        "da": "[1230] C3 - Milj\u00f8 - Basis\u00e5r og m\u00e5l\u00e5r for reduktion af drivhusgasudledninger",
+        "de": "[1230] C3 - Umwelt - Basisjahr und Zieljahr der Treibhausgas-Reduktionsziele",
+        "es": "[1230] C3 - Medio ambiente - A\u00f1o base y a\u00f1o objetivo de reducci\u00f3n de emisiones de gases de efecto invernadero",
+        "fr": "[1230] C3 - Environnement - Ann\u00e9e de r\u00e9f\u00e9rence et ann\u00e9e cible pour la r\u00e9duction des \u00e9missions de gaz \u00e0 effet de serre",
+        "ga": "[1230] C3 - Comhshaol - Bonnbhliain laghdaithe asta\u00edochta\u00ed g\u00e1s ceaptha teasa agus spriocbhliain",
+        "it": "[1230] C3 - Ambiente - Base e anno-obiettivo per la riduzione delle emissioni di gas a effetto serra",
+        "lt": "[1230] C3 - Aplinkos sritis - \u0161iltnamio efekt\u0105 sukelian\u010di\u0173 duj\u0173 emisij\u0173 ma\u017einimo baziniai ir tiksliniai metai",
+        "nl": "[1230] C3 - Milieu - Broeikasgasemissiereductie  basisjaar en doeljaar",
+        "pl": "[1230] C3 - \u015arodowisko - Rok bazowy i docelowy redukcji emisji gaz\u00f3w cieplarnianych",
+        "pt": "[1230] C3 - Ambiente - Ano base e ano alvo para redu\u00e7\u00e3o das emiss\u00f5es de gases com efeito de estufa",
+        "sl": "[1230] C3 - Okolje - Izhodi\u0161\u010dno in ciljno leto za zmanj\u0161anje emisij toplogrednih plinov"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-124": {
+      "definition": "[1240] C3 - Environment - Greenhouse Gas Emission Reduction Targets",
+      "labels": {
+        "da": "[1240] C3 - Milj\u00f8 - M\u00e5l for reduktion af drivhusgasudledninger",
+        "de": "[1240] C3 - Umwelt - Treibhausgas-Reduktionsziele",
+        "es": "[1240] C3 - Medio ambiente - Objetivos de reducci\u00f3n de emisiones de gases de efecto invernadero",
+        "fr": "[1240] C3 - Environnement - Cibles de r\u00e9duction des \u00e9missions de gaz \u00e0 effet de serre",
+        "ga": "[1240] C3 - Comhshaol - Spriocanna Laghdaithe Asta\u00edochta\u00ed G\u00e1s Ceaptha Teasa",
+        "it": "[1240] C3 - Ambiente - Obiettivi di riduzione delle emissioni di gas a effetto serra",
+        "lt": "[1240] C3 - Aplinkos sritis - \u0160iltnamio efekt\u0105 sukelian\u010di\u0173 duj\u0173 emisij\u0173 ma\u017einimo tikslai",
+        "nl": "[1240] C3 - Milieu - Doelstellingen voor broeikasgasemissiereductie",
+        "pl": "[1240] C3 - \u015arodowisko - Cele redukcji emisji gaz\u00f3w cieplarnianych",
+        "pt": "[1240] C3 - Ambiente - Metas de redu\u00e7\u00e3o das emiss\u00f5es de gases com efeito de estufa",
+        "sl": "[1240] C3 - Okolje - Cilji zmanj\u0161anja emisij toplogrednih plinov"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-125": {
+      "definition": "[1250] C3 - Environment - Disclosure of list of main actions the entity seeks to achieve its targets",
+      "labels": {
+        "da": "[1250] C3 - Milj\u00f8 - Liste over de vigtigste foranstaltninger, som virksomheden s\u00f8ger at gennemf\u00f8re for at n\u00e5 sine m\u00e5l",
+        "de": "[1250] C3 - Umwelt - Angabe der wesentlichen Ma\u00dfnahmen, die das Unternehmen zur Erreichung seiner Ziele durchzuf\u00fchren beabsichtigt",
+        "es": "[1250] C3 - Medio ambiente - Divulgaci\u00f3n de la lista de las acciones principales que la entidad busca llevar a cabo para alcanzar sus objetivos",
+        "fr": "[1250] C3 - Environnement - Publication de la liste des principales actions que l'entreprise entend mettre en \u0153uvre pour atteindre ses cibles",
+        "ga": "[1250] C3 - Comhshaol - Nochtadh ar liosta pr\u00edomhghn\u00edomhartha a fh\u00e9achann an gn\u00f3thas lena gcur chun feidhme lena spriocanna a bhaint amach.",
+        "it": "[1250] C3 - Ambiente - Comunicazione dell'elenco delle principali azioni che l'impresa intende attuare per conseguire i propri obiettivi",
+        "lt": "[1250] C3 - Aplinkos sritis - Ataskaitoje atskleid\u017eiamas pagrindini\u0173 veiksm\u0173, kuri\u0173 organizacija siekia pasiekti savo tikslus, s\u0105ra\u0161as",
+        "nl": "[1250] C3 - Milieu - Openbaarmaking van de lijst met belangrijkste acties die de entiteit nastreeft om haar  doelen te bereiken",
+        "pl": "[1250] C3 - \u015arodowisko - Ujawnienie wykazu g\u0142\u00f3wnych dzia\u0142a\u0144, kt\u00f3re jednostka zamierza wdro\u017cy\u0107, aby osi\u0105gn\u0105\u0107 swoje cele",
+        "pt": "[1250] C3 - Ambiente - Divulga\u00e7\u00e3o da lista das principais a\u00e7\u00f5es que a entidade procura executar para alcan\u00e7ar as suas metas",
+        "sl": "[1250] C3 - Okolje - Razkritje seznama glavnih ukrepov, s katerimi si subjekt prizadeva dose\u010di svoje cilje"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-126": {
+      "definition": "[1260] C3 - Environment - Transition plan for undertakings operating in high climate impact sectors",
+      "labels": {
+        "da": "[1260] C3 - Milj\u00f8 - Omstillingsplan for virksomheder, der opererer i sektorer med stor klimaindvirkning",
+        "de": "[1260] C3 - Umwelt - \u00dcbergangsplan f\u00fcr Unternehmen, die in klimaintensiven Sektoren t\u00e4tig sind",
+        "es": "[1260] C3 - Medio ambiente - Plan de transici\u00f3n para empresas que operan en sectores de alto impacto clim\u00e1tico",
+        "fr": "[1260] C3 - Environnement - Plan de transition pour les entreprises op\u00e9rant dans des secteurs \u00e0 fort impact climatique",
+        "ga": "[1260] C3 - Comhshaol - Plean aistrithe do ghn\u00f3thais a n-oibr\u00edonn in earn\u00e1lacha a bhfuil tionchar m\u00f3r ar an aer\u00e1id",
+        "it": "[1260] C3 - Ambiente - Piano di transizione per le imprese che operano in settori ad alto impatto climatico",
+        "lt": "[1260] C3 - Aplinkos sritis - Per\u0117jimo planas \u012fmon\u0117ms, veikian\u010dioms sektoriuose, kuri\u0173 poveikis klimatui yra didelis",
+        "nl": "[1260] C3 - Milieu - Transitieplan voor ondernemingen die actief zijn in sectoren met een grote  klimaatimpact",
+        "pl": "[1260] C3 - \u015arodowisko - Plan transformacji dla jednostek prowadz\u0105cych dzia\u0142alno\u015b\u0107 w sektorach o znacznym oddzia\u0142ywaniu na klimat",
+        "pt": "[1260] C3 - Ambiente - Plano de transi\u00e7\u00e3o para empresas que operam em setores com elevado impacto clim\u00e1tico",
+        "sl": "[1260] C3 - Okolje - Na\u010drt prehoda za podjetja, ki delujejo v sektorjih z velikim vplivom na podnebje"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-127": {
+      "definition": "[1270] C4 - Environment - Climate risks",
+      "labels": {
+        "da": "[1270] C4 - Milj\u00f8 - Klimarisici",
+        "de": "[1270] C4 - Umwelt - Klimabedingte Risiken",
+        "es": "[1270] C4 - Medio ambiente - Riesgos clim\u00e1ticos",
+        "fr": "[1270] C4 - Environnement - Risques climatiques",
+        "ga": "[1270] C4 - Comhshaol - Riosca\u00ed Aer\u00e1ide",
+        "it": "[1270] C4 - Ambiente - Rischi climatici",
+        "lt": "[1270] C4 - Aplinkos sritis - Klimato rizikos",
+        "nl": "[1270] C4 - Milieu - Klimaatrisico's",
+        "pl": "[1270] C4 - \u015arodowisko - Ryzyka klimatyczne",
+        "pt": "[1270] C4 - Ambiente - Riscos clim\u00e1ticos",
+        "sl": "[1270] C4 - Okolje - Podnebna tveganja"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-1275": {
+      "definition": "[1275] Enviroment - Other and/or entity specific information",
+      "labels": {
+        "da": "[1275] Milj\u00f8 - Anden og/eller virksomhedsspecifik information",
+        "de": "[1275] Umwelt - Weitere und/oder unternehmensspezifische Informationen",
+        "es": "[1275] Medio ambiente - Otra y/o informaci\u00f3n espec\u00edfica de la entidad",
+        "fr": "[1275] Environnement - Autres informations et/ou informations sp\u00e9cifiques \u00e0 l\u2019entit\u00e9",
+        "ga": "[1275] Comhshaol - Faisn\u00e9is eile/agus n\u00f3 sonrach don ghn\u00f3thas",
+        "it": "[1275] Ambiente - Altre informazioni e/o specifiche per soggetto",
+        "lt": "[1275] Aplinkos sritis - Kita ir (arba) \u012fmonei specifin\u0117 informacija",
+        "nl": "[1275] Milieu - Overige en/of entiteitsspecifieke informatie",
+        "pl": "[1275] \u015arodowisko - Inne i/lub informacje specyficzne dla jednostki",
+        "pt": "[1275] Ambiente - Outra informa\u00e7\u00e3o e/ou informa\u00e7\u00e3o espec\u00edfica da empresa",
+        "sl": "[1275] Okolje - Druge in/ali za subjekt specifi\u010dne informacije"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-128": {
+      "definition": "[1280] B8 - Social - Workforce - General characteristics: type of contract",
+      "labels": {
+        "da": "[1280] B8 - Social - Arbejdsstyrke - Generelle karakteristika: type af kontrakt",
+        "de": "[1280] B8 - Sozial - Arbeitskr\u00e4fte - Allgemeine Merkmale: Art des Vertrags",
+        "es": "[1280] B8 - Social - Trabajadores - Caracter\u00edsticas generales: tipo de contrato",
+        "fr": "[1280] B8 - Social - Personnel - Caract\u00e9ristiques g\u00e9n\u00e9rales : type de contrat",
+        "ga": "[1280] B8 - S\u00f3isialta - Lucht saothair - Tr\u00e9ithe ginear\u00e1lta: cine\u00e1l conartha",
+        "it": "[1280] B8 - Sociale - Forza lavoro - Caratteristiche generali: tipo di contratto",
+        "lt": "[1280] B8 - Socialin\u0117 sritis - Darbuotojai - Bendrieji rodikliai: sutarties r\u016b\u0161is",
+        "nl": "[1280] B8 - Sociaal - Personeel - Algemene kenmerken: type contract",
+        "pl": "[1280] B8 - Kwestie spo\u0142eczne - Zasoby pracownicze - Charakterystyka og\u00f3lna: rodzaj umowy",
+        "pt": "[1280] B8 - Social - For\u00e7a de trabalho - Caracter\u00edsticas gerais: tipo de contrato",
+        "sl": "[1280] B8 - Dru\u017eba - Delovna sila - Splo\u0161ne zna\u010dilnosti: vrsta pogodbe"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-129": {
+      "definition": "[1290] B8 - Social - Workforce - General characteristics: gender",
+      "labels": {
+        "da": "[1290] B8 - Social - Arbejdsstyrke - Generelle karakteristika: k\u00f8n",
+        "de": "[1290] B8 - Sozial - Arbeitskr\u00e4fte - Allgemeine Merkmale: Geschlecht",
+        "es": "[1290] B8 - Social - Trabajadores - Caracter\u00edsticas generales: g\u00e9nero",
+        "fr": "[1290] B8 - Social - Personnel - Caract\u00e9ristiques g\u00e9n\u00e9rales : genre",
+        "ga": "[1290] B8 - S\u00f3isialta - Lucht saothair - Tr\u00e9ithe ginear\u00e1lta: inscne",
+        "it": "[1290] B8 - Sociale - Forza lavoro - Caratteristiche generali: genere",
+        "lt": "[1290] B8 - Socialin\u0117 sritis - Darbuotojai - Bendrieji rodikliai: lytis",
+        "nl": "[1290] B8 - Sociaal - Personeel  - Algemene kenmerken: gender",
+        "pl": "[1290] B8 - Kwestie spo\u0142eczne - Zasoby pracownicze - og\u00f3lna charakterystyka: p\u0142e\u0107",
+        "pt": "[1290] B8 - Social - M\u00e3o-de-obra - Caracter\u00edsticas gerais: g\u00e9nero",
+        "sl": "[1290] B8 - Dru\u017eba - Delovna sila - Splo\u0161ne zna\u010dilnosti: spol"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-130": {
+      "definition": "[1300] B8 - Social - Workforce - General characteristics: country of employment",
+      "labels": {
+        "da": "[1300] B8 - Social - Arbejdsstyrke - Generelle karakteristika: ans\u00e6ttelsesland",
+        "de": "[1300] B8 - Sozial - Arbeitskr\u00e4fte - Allgemeine Merkmale: Land des Arbeitsvertrags",
+        "es": "[1300] B8 - Social - Trabajadores- Caracter\u00edsticas generales: pa\u00eds de empleo",
+        "fr": "[1300] B8 - Social - Personnel - Caract\u00e9ristiques g\u00e9n\u00e9rales : pays du contrat de travail",
+        "ga": "[1300] B8 - S\u00f3isialta - Lucht saothair - Tr\u00e9ithe ginear\u00e1lta: t\u00edr na fosta\u00edochta",
+        "it": "[1300] B8 - Sociale - Forza lavoro - Caratteristiche generali: paese del contratto di lavoro",
+        "lt": "[1300] B8 - Socialin\u0117 sritis - Darbuotojai - Bendrieji rodikliai: darbo sutarties \u0161alis",
+        "nl": "[1300] B8 - Sociaal - Personeel - Algemene kenmerken: land van tewerkstelling",
+        "pl": "[1300] B8 - Kwestie spo\u0142eczne - Zasoby pracownicze - Charakterystyka og\u00f3lna: kraj zatrudnienia",
+        "pt": "[1300] B8 - Social - M\u00e3o-de-obra - Caracter\u00edsticas gerais: pa\u00eds do contrato de trabalho\"",
+        "sl": "[1300] B8 - Dru\u017eba - Delovna sila - Splo\u0161ne zna\u010dilnosti: dr\u017eava zaposlitve"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-131": {
+      "definition": "[1310] B8 - Social - Workforce - General characteristics: turnover rate",
+      "labels": {
+        "da": "[1310] B8 - Social - Arbejdsstyrke - Generelle karakteristika: Medarbejdsoms\u00e6tning",
+        "de": "[1310] B8 - Sozial - Arbeitskr\u00e4fte - Allgemeine Merkmale: Fluktuationsrate",
+        "es": "[1310] B8 - Social - Trabajadores - Caracter\u00edsticas generales: tasa de rotaci\u00f3n",
+        "fr": "[1310] B8 - Social - Personnel - Caract\u00e9ristiques g\u00e9n\u00e9rales : taux de rotation",
+        "ga": "[1310] B8 - S\u00f3isialta - Lucht saothair - Tr\u00e9ithe ginear\u00e1lta: r\u00e1ta athraithe",
+        "it": "[1310] B8 - Sociale - Forza lavoro - Caratteristiche generali: tasso di avvicendamento",
+        "lt": "[1310] B8 - Socialin\u0117 sritis - Darbuotojai - Bendrieji rodikliai: darbuotoj\u0173 kaitos rodiklis",
+        "nl": "[1310] B8 - Sociaal - Personeel - Algemene kenmerken: verlooppercentage",
+        "pl": "[1310] B8 - Kwestie spo\u0142eczne - Zasoby pracownicze - Og\u00f3lna charakterystyka: wska\u017anik rotacji pracownik\u00f3w",
+        "pt": "[1310] B8 - Social - For\u00e7a de trabalho - Caracter\u00edsticas gerais: taxa de rotatividade",
+        "sl": "[1310] B8 - Dru\u017eba - Delovna sila - Splo\u0161ne zna\u010dilnosti: stopnja fluktuacije"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-132": {
+      "definition": "[1320] B9 - Social - Workforce - Health and safety",
+      "labels": {
+        "da": "[1320] B9 - Social - Arbejdsstyrke - Sundhed og sikkerhed",
+        "de": "[1320] B9 - Sozial - Arbeitskr\u00e4fte - Gesundheitsschutz und Sicherheit",
+        "es": "[1320] B9 - Social - Trabajadores- Salud y seguridad",
+        "fr": "[1320] B9 - Social - Personnel - Sant\u00e9 et s\u00e9curit\u00e9",
+        "ga": "[1320] B9 - S\u00f3isialta - Lucht saothair - Sl\u00e1inte agus s\u00e1bh\u00e1ilteacht",
+        "it": "[1320] B9 - Sociale - Forza lavoro - Salute e sicurezza",
+        "lt": "[1320] B9 - Socialin\u0117 sritis - Darbuotojai - Sveikata ir sauga",
+        "nl": "[1320] B9 - Sociaal - Personeel - Gezondheid en veiligheid",
+        "pl": "[1320] B9 - Kwestie spo\u0142eczne - Zasoby pracownicze - Bezpiecze\u0144stwo i higiena pracy",
+        "pt": "[1320] B9 - Social - M\u00e3o-de-obra - Sa\u00fade e seguran\u00e7a",
+        "sl": "[1320] B9 - Dru\u017eba - Delovna sila - Zdravje in varnost"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-133": {
+      "definition": "[1330] B10 - Social - Workforce - Remuneration, collective bargaining and training",
+      "labels": {
+        "da": "[1330] B10 - Social - Arbejdsstyrke - Vederlag, kollektive overenskomster og uddannelse",
+        "de": "[1330] B10 - Sozial - Arbeitskr\u00e4fte - Verg\u00fctung, Tarifverhandlungen und Schulung",
+        "es": "[1330] B10 - Social - Trabajadores - Retribuci\u00f3n, negociaci\u00f3n colectiva y formaci\u00f3n",
+        "fr": "[1330] B10 - Social - Personnel - R\u00e9mun\u00e9ration, n\u00e9gociation collective et formation",
+        "ga": "[1330] B10 - S\u00f3isialta - Lucht saothair - Luach saothair, c\u00f3mharg\u00e1il agus oili\u00faint",
+        "it": "[1330] B10 - Sociale - Forza lavoro - Retribuzione, contrattazione collettiva e formazione",
+        "lt": "[1330] B10 - Socialin\u0117 sritis - Darbuotojai - Atlyginimas, kolektyvin\u0117s derybos ir mokymai",
+        "nl": "[1330] B10 - Sociaal - Personeel - Beloning, collectieve onderhandelingen en opleiding",
+        "pl": "[1330] B10 - Kwestie spo\u0142eczne - Zasoby pracownicze - Wynagrodzenie, rokowania zbiorowe i szkolenia",
+        "pt": "[1330] B10 - Social - M\u00e3o-de-obra - Remunera\u00e7\u00e3o, negocia\u00e7\u00e3o coletiva e forma\u00e7\u00e3o",
+        "sl": "[1330] B10 - Dru\u017eba - Delovna sila - Prejemki, kolektivna pogajanja in usposabljanje"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-134": {
+      "definition": "[1340] C5 - Social - Additional (general) workforce characteristics",
+      "labels": {
+        "da": "[1340] C5 - Social - Supplerende (generelle) oplysninger om arbejdsstyrken",
+        "de": "[1340] C5 - Sozial - Zus\u00e4tzliche (allgemeine) Merkmale der Arbeitskr\u00e4fte",
+        "es": "[1340] C5 - Social - Caracter\u00edsticas adicionales (generales) de los trabajadores",
+        "fr": "[1340] C5 - Social - Caract\u00e9ristiques suppl\u00e9mentaires (g\u00e9n\u00e9rales) du personnel",
+        "ga": "[1340] C5 - S\u00f3isialta - Tr\u00e9ithe breise (ginear\u00e1lta) an lucht saothair",
+        "it": "[1340] C5 - Sociale - Altre caratteristiche (generali) della forza lavoro",
+        "lt": "[1340] C5 - Socialin\u0117 sritis - Papildomi (bendrieji) darbuotoj\u0173 rodikliai",
+        "nl": "[1340] C5 - Sociaal - Aanvullende (algemene) kenmerken van het personeel",
+        "pl": "[1340] C5 - Kwestie spo\u0142eczne - Dodatkowe (og\u00f3lne) cechy zasob\u00f3w pracowniczych",
+        "pt": "[1340] C5 - Social - Caracter\u00edsticas adicionais (gerais) da for\u00e7a de trabalho",
+        "sl": "[1340] C5 - Dru\u017eba - Dodatne (splo\u0161ne) zna\u010dilnosti delovne sile"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-135": {
+      "definition": "[1350] C6 - Social - Additional own workforce information - Human rights policies and processes",
+      "labels": {
+        "da": "[1350] C6 - Social - Supplerende oplysninger om egen arbejdsstyrke - Politikker og processer vedr\u00f8rende menneskerettigheder",
+        "de": "[1350] C6 - Sozial - Zus\u00e4tzliche Informationen zur eigenen Belegschaft - Richtlinien f\u00fcr die Achtung der Menschenrechte und diesbez\u00fcgliche Prozesse",
+        "es": "[1350] C6 - Social - Informaci\u00f3n adicional sobre el personal propio - Pol\u00edticas y procesos en materia de derechos humanos",
+        "fr": "[1350] C6 - Social - Informations suppl\u00e9mentaires sur le personnel - Politiques et proc\u00e9dures en mati\u00e8re de droits de l\u2019homme",
+        "ga": "[1350] C6 - S\u00f3isialta - Faisn\u00e9is bhreise maidir lena lucht saothair f\u00e9in - Beartais agus pr\u00f3isis um chearta an duine",
+        "it": "[1350] C6 - Sociale - Altre informazioni sulla forza lavoro propria - Politiche e procedure in materia di diritti umani",
+        "lt": "[1350] C6 - Socialin\u0117 sritis - Papildoma darbuotoj\u0173 informacija - \u017dmogaus teisi\u0173 politika ir procesai",
+        "nl": "[1350] C6 - Sociaal - Aanvullende informatie over het eigen personeel - Mensenrechtenbeleid en -processen",
+        "pl": "[1350] C6 - Kwestie spo\u0142eczne - Dodatkowe informacje o w\u0142asnych zasobach pracowniczych - Polityki i procesy dotycz\u0105ce praw cz\u0142owieka",
+        "pt": "[1350] C6 - Social - Informa\u00e7\u00f5es adicionais sobre a pr\u00f3pria m\u00e3o-de-obra - Pol\u00edticas e processos em mat\u00e9ria de direitos humanos",
+        "sl": "[1350] C6 - Dru\u017eba - Dodatne informacije o lastni delovni sili - politike in procesi na podro\u010dju \u010dlovekovih pravic"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-136": {
+      "definition": "[1360] C7 - Social - Severe negative human rights incidents",
+      "labels": {
+        "da": "[1360] C7 - Social - Alvorlige negative menneskerettighedsh\u00e6ndelser",
+        "de": "[1360] C7 - Sozial - Schwerwiegende Vorf\u00e4lle im Zusammenhang mit Menschenrechten",
+        "es": "[1360] C7 - Social - Incidentes graves negativos de derechos humanos",
+        "fr": "[1360] C7 - Social - Incidents graves en mati\u00e8re de droits de l\u2019homme",
+        "ga": "[1360] C7 - S\u00f3isialta - Teagmhais gh\u00e9ara do chearta an duine",
+        "it": "[1360] C7 - Sociale - Incidenti gravi in materia di diritti umani",
+        "lt": "[1360] C7 - Socialin\u0117 sritis - Svarb\u016bs neigiami \u017emogaus teisi\u0173 pa\u017eeidimai",
+        "nl": "[1360] C7 - Sociaal - Ernstige negatieve incidenten met betrekking tot mensenrechten",
+        "pl": "[1360] C7 - Kwestie spo\u0142eczne - Powa\u017cne negatywne incydenty dotycz\u0105ce praw cz\u0142owieka",
+        "pt": "[1360] C7 - Social - Incidentes graves negativos em mat\u00e9ria de direitos humanos",
+        "sl": "[1360] C7 - Dru\u017eba - Resni negativni incidenti na podro\u010dju \u010dlovekovih pravic"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-1365": {
+      "definition": "[1365] Social - Other and/or entity specific information",
+      "labels": {
+        "da": "[1365] Social - Anden og/eller virksomhedsspecifik information",
+        "de": "[1365] Sozial - Weitere und/oder unternehmensspezifische Informationen",
+        "es": "[1365] Social - Otra y/o informaci\u00f3n espec\u00edfica de la entidad",
+        "fr": "[1365] Social - Autres informations et/ou informations sp\u00e9cifiques \u00e0 l\u2019entit\u00e9",
+        "ga": "[1365] S\u00f3isialta - Faisn\u00e9is eile/agus n\u00f3 sonrach don ghn\u00f3thas",
+        "it": "[1365] Sociale - Altre informazioni e/o specifiche per soggetto",
+        "lt": "[1365] Socialin\u0117 sritis - Kita ir (arba) \u012fmonei specifin\u0117 informacija",
+        "nl": "[1365] Sociaal - Overige en/of entiteitsspecifieke informatie",
+        "pl": "[1365] Kwestie spo\u0142eczne - Inne i/lub informacje specyficzne dla jednostki",
+        "pt": "[1365] Social - Outra informa\u00e7\u00e3o e/ou informa\u00e7\u00e3o espec\u00edfica da empresa",
+        "sl": "[1365] Dru\u017eba - Druge in/ali za subjekt specifi\u010dne informacije"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-137": {
+      "definition": "[1370] B11 - Governance - Convictions and fines for corruption and bribery",
+      "labels": {
+        "da": "[1370] B11 - Domme og b\u00f8der for korruption og bestikkelse",
+        "de": "[1370] B11 - Governance - Verurteilungen und Geldstrafen wegen Korruption und Bestechung",
+        "es": "[1370] B11 Gobernanza - Condenas y multas por corrupci\u00f3n y soborno",
+        "fr": "[1370] B11 - Gouvernance - Condamnations et amendes pour corruption et versement de pots-de-vin",
+        "ga": "[1370] B11 - Ciontuithe agus f\u00edne\u00e1lacha mar gheall ar \u00e9illi\u00fa agus breabaireacht",
+        "it": "[1370] B11 - Condanne e ammende per corruzione attiva e passiva",
+        "lt": "[1370] B11 - Valdymo sritis - Nuteisimai ir baudos u\u017e korupcij\u0105 ir ky\u0161ininkavim\u0105",
+        "nl": "[1370] B11 - Governance - Veroordelingen en boetes voor corruptie en omkoping",
+        "pl": "[1370] B11 - \u0141ad korporacyjny - Wyroki skazuj\u0105ce i grzywny za naruszenie przepis\u00f3w antykorupcyjnych i przepis\u00f3w w sprawie zwalczania przekupstwa",
+        "pt": "[1370] B11 - Governa\u00e7\u00e3o - Condena\u00e7\u00f5es e coimas por corrup\u00e7\u00e3o e suborno",
+        "sl": "[1370] B11 - Upravljanje - Obsodbe in globe za korupcijo in podkupovanje"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-138": {
+      "definition": "[1380] C8 - Governance - Revenues derived from activities",
+      "labels": {
+        "da": "[1380] C8 - Virksomhedsadf\u00e6rd - Indt\u00e6gter fra bestemte aktiviteter",
+        "de": "[1380] C8 - Governance - Umsatzerl\u00f6se aus bestimmten T\u00e4tigkeiten und Ausnahme von EU-Referenzwerten",
+        "es": "[1380] C8 - Gobernanza - Ingresos derivados de actividades",
+        "fr": "[1380] C8 - Gouvernance - Chiffre d'affaires r\u00e9alis\u00e9 \u00e0 partir des activit\u00e9s",
+        "ga": "[1380] C8 - Rialachas - Ioncaim \u00f3 earn\u00e1lacha \u00e1irithe",
+        "it": "[1380] C8 - Governance - Ricavi derivanti da attivit\u00e0",
+        "lt": "[1380] C8 - Valdymo sritis - Pajamos, gautos i\u0161 veikl\u0173",
+        "nl": "[1380] C8 - Governance - Ontvangsten uit bepaalde sectoren",
+        "pl": "[1380] C8 - \u0141ad korporacyjny - Przychody z dzia\u0142alno\u015bci",
+        "pt": "[1380] C8 - Governa\u00e7\u00e3o - R\u00e9ditos provenientes de atividades",
+        "sl": "[1380] C8 - Upravljanje - Prihodki iz dejavnosti"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-139": {
+      "definition": "[1390] C8 - Governance - Exclusion from EU benchmarks",
+      "labels": {
+        "da": "[1390] C8 - Virksomhedsadf\u00e6rd - Udelukkelse fra EU-benchmarks",
+        "de": "[1390] C8 - Governance - Ausnahme von EU-Referenzwerten",
+        "es": "[1390] C8 - Gobernanza - Exclusi\u00f3n de los \u00edndices de referencia de la UE",
+        "fr": "[1390] C8 - Gouvernance - Exclusion des indices de r\u00e9f\u00e9rence de l\u2019Union europ\u00e9enne",
+        "ga": "[1390] C8 - Rialachas - Eisiamh \u00f3 thagarmharcanna tagartha an Aontais Eorpaigh",
+        "it": "[1390] C8 - Governance - Esclusione dagli indici di riferimento dell'UE",
+        "lt": "[1390] C8 - Valdymo sritis - Pa\u0161alinimas i\u0161 ES lyginam\u0173j\u0173 etalon\u0173",
+        "nl": "[1390] C8 - Governance - uitsluiting van EU benchmarks",
+        "pl": "[1390] C8 - \u0141ad korporacyjny - wykluczenie z unijnych wska\u017anik\u00f3w referencyjnych",
+        "pt": "[1390] C8 - Governa\u00e7\u00e3o - Exclus\u00e3o dos \u00edndices de refer\u00eancia da UE",
+        "sl": "[1390] C8 - Upravljanje - Izklju\u010ditev iz referen\u010dnih vrednosti EU"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-140": {
+      "definition": "[1400] C9 - Governance - Gender diversity ratio in the governance body",
+      "labels": {
+        "da": "[1400] C9 - Virksomhedsadf\u00e6rd - K\u00f8nsfordeling i ledelsesorganet",
+        "de": "[1400] C9 - Governance - Geschlechtervielfalt im Leitungsorgan",
+        "es": "[1400] C9 - Gobernanza - Ratio de diversidad de g\u00e9nero en el \u00f3rgano de gobernanza",
+        "fr": "[1400] C9 - Gouvernance - Ratio de mixit\u00e9 au sein de l\u2019organe de gouvernance",
+        "ga": "[1400] C9 - Rialachas - C\u00f3imheas \u00e9ags\u00falachta inscne sa chomhlacht rialachais",
+        "it": "[1400] C9 - Governance - Diversit\u00e0 di genere nell'organo di governance",
+        "lt": "[1400] C9 - Valdymo sritis - Ly\u010di\u0173 \u012fvairov\u0117s rodiklis valdymo organe",
+        "nl": "[1400] C9 - Governance - Genderdiversiteitsverhouding in het bestuursorgaan",
+        "pl": "[1400] C9 - \u0141ad korporacyjny - Wska\u017anik zr\u00f3\u017cnicowania organu zarz\u0105dzaj\u0105cego pod wzgl\u0119dem p\u0142ci",
+        "pt": "[1400] C9 - Governa\u00e7\u00e3o - R\u00e1cio de diversidade de g\u00e9nero no \u00f3rg\u00e3o de governa\u00e7\u00e3o",
+        "sl": "[1400] C9 - Upravljanje - Razmerje med spoloma v organu upravljanja"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/vsme/2026-05-01/role/role-141": {
+      "definition": "[1410] Governance - Other and/or entity specific information",
+      "labels": {
+        "da": "[1410] Virksomhedsadf\u00e6rd - Anden og/eller virksomhedsspecifik information",
+        "de": "[1410] Governance - Weitere und/oder unternehmensspezifische Informationen",
+        "es": "[1410] Gobernanza - Otra y/o informaci\u00f3n espec\u00edfica de la entidad",
+        "fr": "[1410] Gouvernance - Autres informations et/ou informations sp\u00e9cifiques \u00e0 l\u2019entit\u00e9",
+        "ga": "[1410] Rialachas - Faisn\u00e9is eile/agus n\u00f3 sonrach don ghn\u00f3thas",
+        "it": "[1410] Governance - Altre informazioni e/o specifiche per soggetto",
+        "lt": "[1410] Valdymo sritis - Kita ir (arba) \u012fmonei specifin\u0117 informacija",
+        "nl": "[1410] Governance - Overige en/of entiteitsspecifieke informatie",
+        "pl": "[1410] \u0141ad korporacyjny - Inne i/lub informacje specyficzne dla jednostki",
+        "pt": "[1410] Governa\u00e7\u00e3o - Outra informa\u00e7\u00e3o e/ou informa\u00e7\u00e3o espec\u00edfica da empresa",
+        "sl": "[1410] Upravljanje - Druge in/ali za subjekt specifi\u010dne informacije"
+      }
+    },
+    "https://xbrl.efrag.org/taxonomy/waste/2026-05-01/waste/domain": {
+      "definition": "Waste List"
+    }
+  },
   "xs_elements": {
     "vsme:TYP": {
       "baseDataType": "xs:string",
