@@ -1093,30 +1093,41 @@ class TaxonomyInfoExtractor:
                             rel.targetQName
                         )
                     ) is not None:
-                        # Several root primary items targeting one hypercube in one
-                        # ELR (ESEF's LineItemsNotDimensionallyQualified does) are
-                        # one cube whose primary items are all their trees, provided
-                        # the arcs agree on everything else that defines the cube.
-                        # Otherwise there is no one cube to record under the key
+                        # Several arcs onto one hypercube in one ELR -- from several
+                        # root primary items, or ESEF's LineItemsNotDimensionallyQualified,
+                        # which a company repeats from the same placeholder with
+                        # xbrldt:closed="true" -- are one cube over all their primary
+                        # items, provided the arcs agree on what else defines the cube.
+                        # xbrldt:closed is not an exempt attribute (XBRL 2.1
+                        # 3.5.3.9.7.4), so arcs differing only in it are distinct
+                        # relationships, and all of them apply: the cube is closed if any
+                        # is. Otherwise there is no one cube to record under the key
                         # dimensions[elrUri][hypercube], and the first root's entry
                         # would be silently overwritten.
                         if (
                             existing["type"],
-                            existing["xbrldt:closed"],
                             existing["xbrldt:contextElement"],
                             targetLinkroles[rel.targetQName],
                         ) != (
                             cubeType,
-                            rel.isClosed,
                             rel.contextElement,
                             rel.consecutiveLinkrole,
                         ):
                             raise ArelleModelInconsistency(
                                 ArelleDiagnostic.error(
-                                    "Hypercube is targeted by all/notAll relationships from more than one root primary item, which differ in arcrole, closed, context element or target linkrole",
+                                    "Hypercube is targeted by all/notAll relationships from more than one root primary item, which differ in arcrole, context element or target linkrole",
                                     elr=elrUri,
                                     concepts=(rel.targetQName,),
                                 )
+                            )
+                        if existing["xbrldt:closed"] != rel.isClosed:
+                            existing["xbrldt:closed"] = True
+                            self.diagnostics.emit(
+                                ArelleDiagnostic.warning(
+                                    "Hypercube is targeted by all/notAll relationships that differ only in xbrldt:closed; recorded as closed",
+                                    elr=elrUri,
+                                    concepts=(rel.targetQName,),
+                                ),
                             )
                         seen = {q for _, q in existing["primaryItems"]}
                         added = [

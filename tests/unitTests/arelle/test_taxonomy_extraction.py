@@ -1136,19 +1136,20 @@ class TestReportHypercubesForLinkrole:
 
 
 class TestExtractDimensionDefinitionsHypercubeCollision:
-    """Several root primary items targeting the same hypercube in one ELR (ESEF's
-    LineItemsNotDimensionallyQualified) are one cube over all their primary items,
-    if the arcs agree on what defines the cube; if they do not, there is no one cube
-    to record, and extractDimensionDefinitions() must give up rather than guess."""
+    """Several arcs onto the same hypercube in one ELR (from several root primary
+    items, or ESEF's LineItemsNotDimensionallyQualified, repeated by a company) are
+    one cube over all their primary items, if the arcs agree on what else defines the
+    cube; if they do not, there is no one cube to record, and
+    extractDimensionDefinitions() must give up rather than guess."""
 
     ELR = "https://example.com/elr"
 
     def extract(
-        self, relA: ConceptRelationship, relB: ConceptRelationship, rootA, rootB
+        self, arcs: list[tuple[StubConcept, list[ConceptRelationship]]]
     ) -> dict[str, Any]:
         allNotAllRelSet = StubHypercubeDimensionRelSet(
-            roots=[rootA, rootB],
-            relsFrom={id(rootA): [relA], id(rootB): [relB]},
+            roots=[root for root, _ in arcs],
+            relsFrom={id(root): rels for root, rels in arcs},
         )
         extractor, token = makeExtractor(
             {},
@@ -1171,20 +1172,33 @@ class TestExtractDimensionDefinitionsHypercubeCollision:
         rootA = StubConcept(qn("RootA"))
         rootB = StubConcept(qn("RootB"))
         table = StubConcept(qn("Table"), isHypercubeItem=True)
-        cubes = self.extract(conceptRel(table), conceptRel(table), rootA, rootB)
+        cubes = self.extract(
+            [(rootA, [conceptRel(table)]), (rootB, [conceptRel(table)])]
+        )
         assert list(cubes) == [qn("Table")]
         assert cubes[qn("Table")]["primaryItems"] == [
             (0, qn("RootA")),
             (0, qn("RootB")),
         ]
 
-    def test_roots_whose_arcs_differ_are_inconsistent(self) -> None:
+    def test_arcs_differing_only_in_closed_are_one_closed_cube(self) -> None:
+        # ESEF's own placeholder arc is open; a company repeats it with
+        # xbrldt:closed="true". Both are relationships (closed is not exempt from
+        # equivalence), both apply, so the cube is closed.
+        root = StubConcept(qn("Placeholder"))
+        table = StubConcept(qn("Table"), isHypercubeItem=True)
+        closed = replace(conceptRel(table), isClosed=True)
+        cubes = self.extract([(root, [conceptRel(table), closed])])
+        assert cubes[qn("Table")]["xbrldt:closed"] is True
+        assert cubes[qn("Table")]["primaryItems"] == [(0, qn("Placeholder"))]
+
+    def test_roots_whose_arcs_differ_otherwise_are_inconsistent(self) -> None:
         rootA = StubConcept(qn("RootA"))
         rootB = StubConcept(qn("RootB"))
         table = StubConcept(qn("Table"), isHypercubeItem=True)
-        relB = replace(conceptRel(table), isClosed=True)
+        other = replace(conceptRel(table), contextElement="scenario")
         with pytest.raises(ArelleModelInconsistency, match="differ"):
-            self.extract(conceptRel(table), relB, rootA, rootB)
+            self.extract([(rootA, [conceptRel(table)]), (rootB, [other])])
 
 
 class TestExtractDimensionDefinitionsType:
