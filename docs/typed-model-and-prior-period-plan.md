@@ -156,3 +156,13 @@ reporting a message nobody sees.
 **Still open.** Reading prior values from the VSME Excel template (EFRAG). Rendering of a prior period has been checked
 structurally and by Arelle, not by eye in a browser. `inline-report-flat-list.html.jinja` looks unused. Three mypy
 errors predate this branch (`localise.py`, `coverage_report_generator/_sampling.py`).
+
+## Follow-up (branch `strr/unit-strings-duplicates`, stacked on this one)
+
+`Unit.fromUnitString`/`toUnitString` (strict OIM Common unit strings; `parse` is gone); hypercube validity checked
+in `InlineReport.addFact` as well as the builder, with `FactBuilder.fromFact`; duplicate facts classified in OIM/WGN
+terms (`report/duplicates.py`) and handled in table cells and `checkAllFactsUsed`; a structural check of rendered
+documents (`tests/unitTests/table_integrity.py`). The 22 golden renders stayed byte-identical. Correction to the
+plan: a concept in two presentation groups shows its facts in each group, so "shown exactly once elsewhere" does not
+hold; the typed table simply does not take a fact valid only for the other cube. Still a known gap: a typed
+dimension's value content is not validated.

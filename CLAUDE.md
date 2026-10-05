@@ -170,7 +170,7 @@ defined checkpoints rather than failing at the first problem. Dev-info messages 
 ### The fact model (`mireport/report/model.py`, `fact.py`, `factbuilder.py`, `aoix.py`)
 
 A `Fact` is typed values, not aoix strings: `concept`, `value`, a `ReportPeriod`, a `Unit` (measures over
-measures, `Unit.parse("(a*b)/c", ...)`), `decimals`, `scale`, `ExplicitDimensionValue`s,
+measures; `Unit.fromUnitString("(a*b)/c", resolve)` / `unit.toUnitString()` are the strict OIM Common unit string), `decimals`, `scale`, `ExplicitDimensionValue`s,
 `TypedDimensionValue`s (the member's text, unescaped) and enumeration members. Build one with a
 `FactBuilder`, which keeps its setters (`setSimpleUnit`, `setCurrency`, `setNamedPeriod`, `setTypedDimension`,
 `setEnumerationValue`/`setEnumerationSet`...) and does the validation. **aoix text is written in exactly one place,
@@ -178,6 +178,14 @@ measures, `Unit.parse("(a*b)/c", ...)`), `decimals`, `scale`, `ExplicitDimension
 `units=a/b`); `period-type`, `escape`, `transform` and `fn-refs` are derived there, not stored. A typed value that
 aoix cannot quote (a double quote) is refused rather than written with the deprecated `typed` keyword. A
 monetary fact carries its currency (the report's default, unless it says otherwise).
+
+Dimensional validity (a matching hypercube; a declared typed dimension must be present; typed value *content* is
+not checked) runs in `FactBuilder.buildFact` and again in `InlineReport.addFact`, so a directly built `Fact` is
+checked too; `FactBuilder.fromFact` copies one to change. Duplicates follow the OIM / XBRL WGN
+(`report/duplicates.py`): `duplicateClass(a, b)` is complete, consistent, inconsistent, or None (alternative facts,
+e.g. differing only in unit). A table cell keeps the first of complete duplicates, the more precise of consistent
+ones, and the first with a warning otherwise; only a complete duplicate left out counts as not lost.
+`tests/unitTests/table_integrity.py` checks a rendered document's structure (no browser needed).
 
 `setPercentageFact(fraction, decimals)` takes XBRL's own value and decimals (0.1250 at 4 is shown as 12.50 with
 `ix:scale -2`); `setPercentageValue` takes a spreadsheet's display decimals.
