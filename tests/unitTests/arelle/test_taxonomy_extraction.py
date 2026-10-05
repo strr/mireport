@@ -2408,3 +2408,87 @@ class TestExtractAnchoring:
         [diagnostic] = diagnostics
         assert diagnostic.level == logging.WARNING
         assert diagnostic.elr == self.ELR
+
+
+class TestExtractRoles:
+    """extractRoles(): the roleType of every ELR any base set uses."""
+
+    PRES = "https://example.com/role/Pres"
+    HC = "https://example.com/role/Hypercube"
+    ANCH = "https://example.com/role/Anchoring"
+    NO_TYPE = "https://example.com/role/NoRoleType"
+
+    def extract(
+        self,
+        baseSets: list[tuple[str, str]],
+        roleTypes: dict[str, StubRoleType],
+        labelRels: list[ResourceRelationship] | None = None,
+    ) -> dict[str, Any]:
+        extractor, _ = makeExtractor(
+            {XbrlConst.elementLabel: labelRels or []}, baseSets=baseSets
+        )
+        cast(Any, extractor.model)._roleTypes = roleTypes
+        extractor.extractRoles()
+        return extractor.taxonomyJson
+
+    def test_non_presentation_elr_with_roletype_and_labels_is_baked(self) -> None:
+        labelRels = [
+            labelRel(StubLabelResource(None, "en", "Anchoring label")),
+            labelRel(StubLabelResource(None, "FR", "Ancrage")),
+        ]
+        taxonomyJson = self.extract(
+            [(XbrlConst.widerNarrower, self.ANCH)],
+            {self.ANCH: StubRoleType(self.ANCH, "Anchoring")},
+            labelRels,
+        )
+        assert taxonomyJson["roles"] == {
+            self.ANCH: {
+                "definition": "Anchoring",
+                "labels": {"en": "Anchoring label", "fr": "Ancrage"},
+            }
+        }
+
+    def test_labels_and_definition_omitted_when_absent(self) -> None:
+        taxonomyJson = self.extract(
+            [(XbrlConst.all, self.HC)], {self.HC: StubRoleType(self.HC, None)}
+        )
+        assert taxonomyJson["roles"] == {self.HC: {}}
+
+    def test_elr_without_roletype_is_omitted(self) -> None:
+        taxonomyJson = self.extract(
+            [(XbrlConst.all, self.HC), (XbrlConst.all, self.NO_TYPE)],
+            {self.HC: StubRoleType(self.HC, "Hypercube")},
+        )
+        assert list(taxonomyJson["roles"]) == [self.HC]
+
+    def test_unused_roletype_is_not_listed_and_elrs_are_deduplicated(self) -> None:
+        taxonomyJson = self.extract(
+            [(XbrlConst.all, self.HC), (XbrlConst.parentChild, self.HC)],
+            {
+                self.HC: StubRoleType(self.HC, "Hypercube"),
+                self.ANCH: StubRoleType(self.ANCH, "Unused"),
+            },
+        )
+        assert list(taxonomyJson["roles"]) == [self.HC]
+
+    def test_no_elr_or_no_roletype_writes_no_key(self) -> None:
+        assert "roles" not in self.extract([], {self.HC: StubRoleType(self.HC)})
+        assert "roles" not in self.extract([(XbrlConst.all, self.NO_TYPE)], {})
+
+    def test_presentation_entries_are_untouched(self) -> None:
+        extractor, _ = makeExtractor(
+            {XbrlConst.elementLabel: []},
+            baseSets=[(XbrlConst.parentChild, self.PRES)],
+        )
+        cast(Any, extractor.model)._roleTypes = {
+            self.PRES: StubRoleType(self.PRES, "Pres")
+        }
+        extractor.taxonomyJson["presentation"][self.PRES] = {
+            "definition": "Pres",
+            "rows": [],
+        }
+        extractor.extractRoles()
+        assert extractor.taxonomyJson["presentation"] == {
+            self.PRES: {"definition": "Pres", "rows": []}
+        }
+        assert extractor.taxonomyJson["roles"] == {self.PRES: {"definition": "Pres"}}

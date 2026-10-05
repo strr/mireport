@@ -761,6 +761,30 @@ class Reference:
         return hash((self.role, self.parts))
 
 
+def _pickRoleLabel(
+    labels: Mapping[str, str],
+    definition: str | None,
+    requestedLanguage: str | None,
+    defaultLanguage: str | None,
+    fallbackToDefaultLanguage: bool,
+    fallbackToDefinition: bool,
+) -> str | None:
+    """The label-selection rule shared by PresentationGroup, ReferenceRole and
+    RoleInfo: the requested language, then the taxonomy's default language,
+    then the role's definition (each fallback optional), else None."""
+    if requestedLanguage and (label := labels.get(requestedLanguage)):
+        return label
+    if (
+        fallbackToDefaultLanguage
+        and defaultLanguage
+        and (label := labels.get(defaultLanguage))
+    ):
+        return label
+    if fallbackToDefinition:
+        return definition
+    return None
+
+
 class ReferenceRole(NamedTuple):
     """The roleType a taxonomy declares for a role its references use: its
     definition and generic labels, exactly as a PresentationGroup carries them
@@ -784,17 +808,14 @@ class ReferenceRole(NamedTuple):
     ) -> str | None:
         """As PresentationGroup.getLabel(), except that there may be no
         definition to fall back to, hence None rather than ""."""
-        if requestedLanguage and (label := self.labels.get(requestedLanguage)):
-            return label
-        if (
-            fallbackToDefaultLanguage
-            and (default := self.taxonomy.defaultLanguage)
-            and (label := self.labels.get(default))
-        ):
-            return label
-        if fallbackToDefinition:
-            return self.definition
-        return None
+        return _pickRoleLabel(
+            self.labels,
+            self.definition,
+            requestedLanguage,
+            self.taxonomy.defaultLanguage,
+            fallbackToDefaultLanguage,
+            fallbackToDefinition,
+        )
 
     @classmethod
     def fromJSON(cls, taxonomy: Taxonomy, roleUri: str, metaData: Mapping) -> Self:
@@ -882,17 +903,17 @@ class PresentationGroup(NamedTuple):
         fallbackToDefaultLanguage: bool = True,
         fallbackToDefinition: bool = True,
     ) -> str:
-        if requestedLanguage and (label := self.labels.get(requestedLanguage)):
-            return label
-        if (
-            fallbackToDefaultLanguage
-            and (default := self.taxonomy.defaultLanguage)
-            and (label := self.labels.get(default))
-        ):
-            return label
-        if fallbackToDefinition:
-            return self.definition
-        return ""
+        return (
+            _pickRoleLabel(
+                self.labels,
+                self.definition,
+                requestedLanguage,
+                self.taxonomy.defaultLanguage,
+                fallbackToDefaultLanguage,
+                fallbackToDefinition,
+            )
+            or ""
+        )
 
     @classmethod
     def fromJSON(cls, taxonomy: Taxonomy, roleUri: str, metaData: Mapping) -> Self:
@@ -955,6 +976,49 @@ class PresentationGroup(NamedTuple):
                 return PresentationStyle.List
             case (False, False) | _:
                 return PresentationStyle.Empty
+
+
+@dataclass(frozen=True, slots=True)
+class RoleInfo:
+    """The roleType a taxonomy declares for an extended link role (ELR) that
+    any of its base sets uses, whether or not the ELR has a presentation
+    network: definition and generic labels. See Taxonomy.getRole() and
+    Taxonomy.roles. defaultLanguage is the taxonomy's, for getLabel()."""
+
+    roleUri: str
+    definition: str | None
+    labels: Mapping[str, str]
+    defaultLanguage: str | None = field(default=None, compare=False, repr=False)
+
+    def getLabel(
+        self,
+        requestedLanguage: str | None = None,
+        *,
+        fallbackToDefaultLanguage: bool = True,
+        fallbackToDefinition: bool = True,
+    ) -> str | None:
+        """As PresentationGroup.getLabel(), except that there may be no
+        definition to fall back to, hence None rather than ""."""
+        return _pickRoleLabel(
+            self.labels,
+            self.definition,
+            requestedLanguage,
+            self.defaultLanguage,
+            fallbackToDefaultLanguage,
+            fallbackToDefinition,
+        )
+
+    @classmethod
+    def fromJSON(
+        cls, roleUri: str, metaData: Mapping, defaultLanguage: str | None
+    ) -> Self:
+        definition = metaData.get("definition")
+        return cls(
+            roleUri,
+            None if definition is None else str(definition).strip(),
+            metaData.get("labels", {}),
+            defaultLanguage,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1256,6 +1320,7 @@ class Taxonomy:
         calculationArcrole: str | None = None,
         anchoring: Mapping[str, Mapping[str, Any]] | None = None,
         referenceRoles: Mapping[str, Mapping[str, Any]] | None = None,
+        roles: Mapping[str, Mapping[str, Any]] | None = None,
     ) -> None:
         # presentation, dimensions and calculation are only ever read, never
         # modified, so the same parsed JSON can back any number of Taxonomy
@@ -1297,6 +1362,7 @@ class Taxonomy:
             )
             for concept, refs in referencesByConcept.items()
         }
+        self._rawRoles: Mapping[str, Mapping[str, Any]] = roles or {}
         self._referenceRoles: Mapping[str, ReferenceRole] = {
             roleUri: ReferenceRole.fromJSON(self, roleUri, bits)
             for roleUri, bits in (referenceRoles or {}).items()
@@ -1591,6 +1657,7 @@ class Taxonomy:
             # citing only XBRL 2.1's predefined roles) and in JSON baked
             # before reference roles were extracted.
             referenceRoles=bits.get("referenceRoles"),
+            roles=bits.get("roles"),
         )
 
     def _calculationArcroleFromJSON(
@@ -1840,6 +1907,27 @@ class Taxonomy:
         or None if there is none: a predefined XBRL 2.1 role, a role no
         reference uses, or JSON baked before reference roles were extracted."""
         return self._referenceRoles.get(roleUri)
+
+    @cached_property
+    def _rolesByUri(self) -> Mapping[str, RoleInfo]:
+        default = self.defaultLanguage
+        return {
+            roleUri: RoleInfo.fromJSON(roleUri, bits, default)
+            for roleUri, bits in sorted(self._rawRoles.items())
+        }
+
+    @property
+    def roles(self) -> tuple[RoleInfo, ...]:
+        """The declared roleType (definition, labels) of every ELR any base
+        set in the DTS uses, sorted by roleUri -- including ELRs with no
+        presentation network. Empty if the JSON predates roles being
+        extracted."""
+        return tuple(self._rolesByUri.values())
+
+    def getRole(self, roleUri: str) -> RoleInfo | None:
+        """The declared roleType of an ELR the DTS uses, or None if the ELR
+        is unused, has no roleType, or the JSON predates roles."""
+        return self._rolesByUri.get(roleUri)
 
     @property
     def presentation(self) -> tuple[PresentationGroup, ...]:

@@ -226,6 +226,7 @@ class TaxonomyInfoExtractor:
         self.extractPresentation()
         self.extractCalculation()
         self.extractAnchoring()
+        self.extractRoles()
         # Extract dimension defaults before other dimension-related information
         # (used by other dimension-related extraction methods)
         self.extractDimensionDefaults()
@@ -873,6 +874,29 @@ class TaxonomyInfoExtractor:
             referenceRoles[role] = jrole
         if referenceRoles:
             self.taxonomyJson["referenceRoles"] = referenceRoles
+
+    def extractRoles(self) -> None:
+        """Write the optional top-level "roles" object: for every extended
+        link role that any base set in the DTS uses (hypercube, calculation,
+        anchoring, definition, generic links ... not only presentation) and
+        for which the DTS declares a roleType, that roleType's definition and
+        generic labels, in the same shape as a "presentation" entry minus the
+        rows: {"definition": str, "labels": {lang: label}}. "definition" is
+        omitted when the roleType has none, "labels" when there are none; an
+        ELR with no roleType has no entry. Written only when non-empty.
+        Purely additive: "presentation" entries are unchanged."""
+        roles: dict[str, dict[str, Any]] = {}
+        for elrUri in sorted({linkrole for _, linkrole in self.model.baseSetsInDTS()}):
+            if (roleType := self.model.declaredRoleType(elrUri)) is None:
+                continue
+            jrole: dict[str, Any] = {}
+            if (definition := roleType.definition) is not None:
+                jrole["definition"] = definition
+            if labels := self.getLabelsForRoleType(roleType):
+                jrole["labels"] = labels
+            roles[elrUri] = jrole
+        if roles:
+            self.taxonomyJson["roles"] = roles
 
     def extractConceptsAndMetadata(self) -> None:
         self.cntlr.addToLog(
