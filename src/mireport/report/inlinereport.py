@@ -34,6 +34,7 @@ from mireport.report.layout import ReportLayoutOrganiser, TableStyle
 from mireport.report.model import PeriodRole, ReportPeriod
 from mireport.report.periods import DurationPeriodHolder, PeriodHolder
 from mireport.report.theme import ReportTheme
+from mireport.report.validation import validateFactDimensions
 from mireport.stringutil import NumberGroupingApostrophes
 from mireport.taxonomy import Concept, PresentationStyle, QName, Taxonomy
 from mireport.typealiases import FactValue
@@ -303,8 +304,10 @@ class InlineReport:
 
     def addFact(self, fact: Fact) -> None:
         """
-        Adds a Fact to the report.
+        Adds a Fact to the report, after checking it against the taxonomy's hypercubes
+        (the builder checks too; this covers a Fact constructed directly).
         """
+        validateFactDimensions(self._taxonomy, fact)
         self._facts.append(fact)
         self._factsByConcept[fact.concept].append(fact)
 
