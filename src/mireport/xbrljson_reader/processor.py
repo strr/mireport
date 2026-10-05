@@ -380,7 +380,7 @@ class XbrlJsonProcessor:
                 self.taxonomy.QNameMaker.fromNamespaceAndLocalName(XBRLI_NS, "pure")
             )
             return
-        parsed = Unit.parse(unit, self._qname)
+        parsed = Unit.fromUnitString(unit, self._qname)
         if parsed.is_currency:
             fb.setCurrency(parsed.measure)  # checks it is a real currency
         else:
