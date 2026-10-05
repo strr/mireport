@@ -360,7 +360,14 @@ class TaxonomyInfoExtractor:
         )
 
         dimensionDomainRoots = dimensionDomainRelSet.rootConcepts()
-        if explicitDimension not in dimensionDomainRoots:
+        # A dimension with no dimension-domain arcs at all is no root (roots have
+        # arcs), but is legal: it has no domain (ESEF's esma_technical:NullDimension
+        # is one). Only one with arcs that is not their root, or that is itself some
+        # arc's target, is malformed.
+        hasNoDomain = not dimensionDomainRelSet.hasRelationshipsFrom(
+            explicitDimension
+        ) and not dimensionDomainRelSet.hasRelationshipsTo(explicitDimension)
+        if explicitDimension not in dimensionDomainRoots and not hasNoDomain:
             raise ArelleModelInconsistency(
                 ArelleDiagnostic.error(
                     "Dimension is not a root of the dimension-domain relationship set",

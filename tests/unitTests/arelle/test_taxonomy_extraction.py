@@ -946,6 +946,44 @@ class StubHypercubeDimensionRelSet:
         return self._relsFrom.get(id(concept), [])
 
 
+class TestGetDomainMembersForExplicitDimensionWithoutDomain:
+    """ESEF's esma_technical:NullDimension (a hypercube's only dimension, used to block
+    default use of line items) has no dimension-domain arcs at all: legal, and so
+    absent from rootConcepts() -- unlike a dimension that is a domain's target."""
+
+    ELR = "https://example.com/elr"
+
+    def members(
+        self, dimension: StubConcept, relSet: StubHypercubeDimensionRelSet
+    ) -> tuple[list[Any], list[ArelleDiagnostic]]:
+        extractor, token = makeExtractor({}, {self.ELR: relSet})
+        extractor.dimensionDefaults = {}
+        result = extractor.getDomainMembersForExplicitDimension(
+            cast(ModelConcept, dimension), self.ELR
+        )
+        return result, collectedDiagnostics(token)
+
+    def test_dimension_with_no_dimension_domain_arcs_has_no_members(self) -> None:
+        dimension = StubConcept(qn("NullDimension"), isExplicitDimension=True)
+        other = StubConcept(qn("OtherDimension"), isExplicitDimension=True)
+        domain = StubConcept(qn("Domain"))
+        relSet = StubHypercubeDimensionRelSet(
+            roots=[other], relsFrom={id(other): [conceptRel(domain)]}
+        )
+        result, diagnostics = self.members(dimension, relSet)
+        assert result == []
+        assert [d.level for d in diagnostics] == [logging.WARNING]
+        assert "no domain relationships" in diagnostics[0].text
+
+    def test_dimension_that_is_a_domain_target_is_still_an_error(self) -> None:
+        dimension = StubConcept(qn("Misused"), isExplicitDimension=True)
+        relSet = StubHypercubeDimensionRelSet(
+            roots=[], relsFrom={}, targets={id(dimension)}
+        )
+        with pytest.raises(ArelleModelInconsistency, match="not a root"):
+            self.members(dimension, relSet)
+
+
 class TestGetDimensions:
     ELR = "https://example.com/elr"
 
