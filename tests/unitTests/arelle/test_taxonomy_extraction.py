@@ -946,6 +946,18 @@ class StubHypercubeDimensionRelSet:
         return self._relsFrom.get(id(concept), [])
 
 
+class TestBakedSectionsAlwaysPresent:
+    def test_presentation_is_there_even_when_the_dts_has_none(self) -> None:
+        # ESEF's own taxonomy has no presentation linkbase; Taxonomy.fromJSON
+        # indexes bits["presentation"] unconditionally.
+        extractor, token = makeExtractor({})
+        try:
+            assert extractor.taxonomyJson["presentation"] == {}
+            assert extractor.taxonomyJson["dimensions"] == {}
+        finally:
+            collectedDiagnostics(token)
+
+
 class TestGetDomainMembersForExplicitDimensionWithoutDomain:
     """ESEF's esma_technical:NullDimension (a hypercube's only dimension, used to block
     default use of line items) has no dimension-domain arcs at all: legal, and so

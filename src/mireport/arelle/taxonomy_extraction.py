@@ -204,6 +204,9 @@ class TaxonomyInfoExtractor:
         # going through extract()) would KeyError on the first cube. Set it
         # here so both paths see the same structure.
         self.taxonomyJson["dimensions"] = defaultdict(dict)
+        # Present even when the DTS has no presentation linkbase (ESEF's own has
+        # none): Taxonomy.fromJSON reads it unconditionally.
+        self.taxonomyJson["presentation"] = {}
         self.qnameConverter: ArelleQNameCanonicaliser = (
             ArelleQNameCanonicaliser.bootstrap(modelXbrl)
         )
