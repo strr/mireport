@@ -225,6 +225,7 @@ class TaxonomyInfoExtractor:
 
         self.extractPresentation()
         self.extractCalculation()
+        self.extractAnchoring()
         # Extract dimension defaults before other dimension-related information
         # (used by other dimension-related extraction methods)
         self.extractDimensionDefaults()
@@ -1361,6 +1362,52 @@ class TaxonomyInfoExtractor:
                 arcsByArcrole
             )
         self.cntlr.addToLog("Processing calculation network [completed]")
+
+    def extractAnchoring(self) -> None:
+        """Write the optional top-level "anchoring" section: for each ELR
+        holding ESEF wider-narrower arcs (anchoring of extension concepts to
+        base concepts), every arc as a source (the wider concept), target
+        (the narrower concept) and order.
+
+        A flat edge list like "calculation", with the direction exactly as the
+        arc declares it: it is not normalised, since filings anchor both ways
+        (the extension concept is sometimes the wider end, sometimes the
+        narrower). Arelle's relationship set has already resolved
+        prohibition and priority, so this is the effective set of arcs, not
+        the raw linkbase. Written only when at least one arc exists.
+
+        An ELR with an arc whose endpoint is not a concept is skipped with a
+        warning rather than failing the bake: anchoring is auxiliary
+        information."""
+        self.cntlr.addToLog("Processing anchoring relationships")
+        anchoring: dict[str, dict[str, Any]] = {}
+        for elrUri in self.model.linkrolesFor(XbrlConst.widerNarrower):
+            relSet = self.model.conceptRelationshipSet(XbrlConst.widerNarrower, elrUri)
+            try:
+                relationships = [
+                    {
+                        "source": qnameOf(source),
+                        "target": rel.targetQName,
+                        "order": rel.order,
+                    }
+                    for source, rels in relSet.relationshipsBySource()
+                    for rel in rels
+                ]
+            except ArelleModelInconsistency as e:
+                self.diagnostics.emit(
+                    ArelleDiagnostic.warning(
+                        "Skipping wider-narrower (anchoring) relationships of a "
+                        "linkrole with a non-concept endpoint",
+                        elr=elrUri,
+                        problem=str(e),
+                    )
+                )
+                continue
+            if relationships:
+                anchoring[elrUri] = {"relationships": relationships}
+        if anchoring:
+            self.taxonomyJson["anchoring"] = anchoring
+        self.cntlr.addToLog("Processing anchoring relationships [completed]")
 
     def _calculationArcrole(self, arcsByArcrole: Counter[str]) -> str:
         """The one summation-item arcrole to record for the whole DTS, given

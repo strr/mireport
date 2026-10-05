@@ -2329,3 +2329,82 @@ class TestExtractCalculation:
             ),
         ]
         assert taxonomy.calculationArcrole is expected
+
+
+class TestExtractAnchoring:
+    ELR = "https://example.com/role/Anchoring"
+    OTHER_ELR = "https://example.com/role/OtherAnchoring"
+    NAMES = ("ExtA", "ExtB", "BaseA", "BaseB")
+
+    def setup_method(self) -> None:
+        self.c = {n: StubConcept(qn(n)) for n in self.NAMES}
+
+    def rel(self, target: str, order: float) -> ConceptRelationship:
+        return conceptRel(self.c[target], arcrole=XbrlConst.widerNarrower, order=order)
+
+    def extract(
+        self, networks: dict[str, Any]
+    ) -> tuple[TaxonomyInfoExtractor, list[ArelleDiagnostic]]:
+        extractor, token = makeExtractor(
+            {},
+            {(XbrlConst.widerNarrower, elr): rs for elr, rs in networks.items()},
+            linkrolesByArcrole={XbrlConst.widerNarrower: list(networks)},
+        )
+        extractor.extractAnchoring()
+        return extractor, collectedDiagnostics(token)
+
+    @staticmethod
+    def arc(source: str, target: str, order: float) -> Any:
+        return {"source": qn(source), "target": qn(target), "order": order}
+
+    def test_arcs_in_both_directions_keep_source_target_and_order(self) -> None:
+        c = self.c
+        networks = {
+            self.ELR: StubCalculationRelSet(
+                [
+                    # extension is wider
+                    (c["ExtA"], [self.rel("BaseA", 1.0)]),
+                    # extension is narrower
+                    (c["BaseB"], [self.rel("ExtB", 2.5)]),
+                ]
+            )
+        }
+        extractor, diagnostics = self.extract(networks)
+        assert diagnostics == []
+        assert extractor.taxonomyJson["anchoring"] == {
+            self.ELR: {
+                "relationships": [
+                    self.arc("ExtA", "BaseA", 1.0),
+                    self.arc("BaseB", "ExtB", 2.5),
+                ]
+            }
+        }
+
+    def test_no_arcs_writes_no_key(self) -> None:
+        extractor, diagnostics = self.extract({})
+        assert "anchoring" not in extractor.taxonomyJson
+        assert diagnostics == []
+        extractor, _ = self.extract({self.ELR: StubCalculationRelSet([])})
+        assert "anchoring" not in extractor.taxonomyJson
+
+    def test_non_concept_endpoint_is_skipped_with_a_warning(self) -> None:
+        class BadRelSet:
+            def relationshipsBySource(self) -> Any:
+                raise ArelleModelInconsistency(
+                    ArelleDiagnostic.error("Expected a ModelConcept", got="'x'")
+                )
+
+        c = self.c
+        networks = {
+            self.ELR: BadRelSet(),
+            self.OTHER_ELR: StubCalculationRelSet(
+                [(c["ExtA"], [self.rel("BaseA", 1.0)])]
+            ),
+        }
+        extractor, diagnostics = self.extract(networks)
+        assert extractor.taxonomyJson["anchoring"] == {
+            self.OTHER_ELR: {"relationships": [self.arc("ExtA", "BaseA", 1.0)]}
+        }
+        [diagnostic] = diagnostics
+        assert diagnostic.level == logging.WARNING
+        assert diagnostic.elr == self.ELR

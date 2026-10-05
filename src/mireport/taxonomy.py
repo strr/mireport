@@ -1222,6 +1222,25 @@ class EffectiveHypercube:
         return True
 
 
+@dataclass(frozen=True, slots=True)
+class AnchoringRelationship:
+    """One ESEF wider-narrower (anchoring) arc, in the direction declared:
+    source is the wider concept and target the narrower. Either end may be the
+    extension concept."""
+
+    source: Concept
+    target: Concept
+    order: float
+
+
+@dataclass(frozen=True, slots=True)
+class AnchoringGroup:
+    """One ELR's anchoring arcs, in file order."""
+
+    roleUri: str
+    relationships: tuple[AnchoringRelationship, ...]
+
+
 class Taxonomy:
     def __init__(
         self,
@@ -1235,6 +1254,7 @@ class Taxonomy:
         references: Iterable[Mapping] | None = None,
         calculation: Mapping[str, Mapping[str, Any]] | None = None,
         calculationArcrole: str | None = None,
+        anchoring: Mapping[str, Mapping[str, Any]] | None = None,
         referenceRoles: Mapping[str, Mapping[str, Any]] | None = None,
     ) -> None:
         # presentation, dimensions and calculation are only ever read, never
@@ -1291,6 +1311,10 @@ class Taxonomy:
             for roleUri, bits in (calculation or {}).items()
         )
         self._calculationArcrole = self._calculationArcroleFromJSON(calculationArcrole)
+        self._anchoring: tuple[AnchoringGroup, ...] = tuple(
+            self._anchoringGroupFromJSON(roleUri, bits)
+            for roleUri, bits in sorted((anchoring or {}).items())
+        )
 
         self._lookupConceptsByName: dict[str, list[Concept]] = defaultdict(list)
         for concept in concepts.values():
@@ -1560,6 +1584,9 @@ class Taxonomy:
             # baked before calculations were extracted.
             calculation=bits.get("calculation"),
             calculationArcrole=bits.get("calculationArcrole"),
+            # Optional: only when the DTS has ESEF wider-narrower arcs, and
+            # absent from JSON baked before they were extracted.
+            anchoring=bits.get("anchoring"),
             # Absent when no reference role has a declared roleType (a DTS
             # citing only XBRL 2.1's predefined roles) and in JSON baked
             # before reference roles were extracted.
@@ -1599,6 +1626,33 @@ class Taxonomy:
                     source=self.getConcept(jrel["source"]),
                     target=self.getConcept(jrel["target"]),
                     weight=float(jrel["weight"]),
+                    order=float(jrel["order"]),
+                )
+                for jrel in metaData["relationships"]
+            ),
+        )
+
+    def _anchoringGroupFromJSON(
+        self, roleUri: str, metaData: Mapping[str, Any]
+    ) -> AnchoringGroup:
+        """One entry of the top-level "anchoring" section, as written by
+        TaxonomyInfoExtractor.extractAnchoring()."""
+
+        def concept(qname: str) -> Concept:
+            try:
+                return self.getConcept(qname)
+            except KeyError:
+                raise ValueError(
+                    f"Anchoring relationship in {roleUri} refers to {qname}, "
+                    "which is not a concept of the taxonomy"
+                ) from None
+
+        return AnchoringGroup(
+            roleUri=roleUri,
+            relationships=tuple(
+                AnchoringRelationship(
+                    source=concept(jrel["source"]),
+                    target=concept(jrel["target"]),
                     order=float(jrel["order"]),
                 )
                 for jrel in metaData["relationships"]
@@ -1798,6 +1852,13 @@ class Taxonomy:
         no calculation linkbase, or its JSON predates calculations being
         extracted."""
         return self._calculation
+
+    @property
+    def anchoring(self) -> tuple[AnchoringGroup, ...]:
+        """One AnchoringGroup per ELR with ESEF wider-narrower arcs, sorted
+        by roleUri. Empty if the taxonomy has none or its JSON predates them
+        being extracted."""
+        return self._anchoring
 
     @property
     def calculationArcrole(self) -> CalculationArcrole | None:
