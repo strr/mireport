@@ -1075,6 +1075,7 @@ class TaxonomyInfoExtractor:
             relSet = self.model.conceptRelationshipSet(hypercubeArcRoles, elrUri)
             roots = relSet.rootConcepts()
             primaryItemsByHypercube: dict[QName, set[QName]] = defaultdict(set)
+            targetLinkroles: dict[QName, str] = {}
             for root_concept in roots:
                 for rel in relSet.relationshipsFrom(root_concept):
                     concept = rel.target
@@ -1086,20 +1087,50 @@ class TaxonomyInfoExtractor:
                                 concepts=(rel.targetQName,),
                             )
                         )
-                    if rel.targetQName in self.taxonomyJson["dimensions"][elrUri]:
-                        # Two different root primary items targeting the same
-                        # hypercube in one ELR is a shape mireport doesn't
-                        # understand (which root's primary items apply?), and
-                        # would otherwise silently overwrite the first root's
-                        # cube entry -- dimensions[elrUri][hypercube] is keyed
-                        # by hypercube alone.
-                        raise ArelleModelInconsistency(
-                            ArelleDiagnostic.error(
-                                "Hypercube is targeted by all/notAll relationships from more than one root primary item",
-                                elr=elrUri,
-                                concepts=(rel.targetQName,),
-                            )
+                    cubeType = _hypercubeType(rel.arcrole, elrUri, rel.targetQName)
+                    if (
+                        existing := self.taxonomyJson["dimensions"][elrUri].get(
+                            rel.targetQName
                         )
+                    ) is not None:
+                        # Several root primary items targeting one hypercube in one
+                        # ELR (ESEF's LineItemsNotDimensionallyQualified does) are
+                        # one cube whose primary items are all their trees, provided
+                        # the arcs agree on everything else that defines the cube.
+                        # Otherwise there is no one cube to record under the key
+                        # dimensions[elrUri][hypercube], and the first root's entry
+                        # would be silently overwritten.
+                        if (
+                            existing["type"],
+                            existing["xbrldt:closed"],
+                            existing["xbrldt:contextElement"],
+                            targetLinkroles[rel.targetQName],
+                        ) != (
+                            cubeType,
+                            rel.isClosed,
+                            rel.contextElement,
+                            rel.consecutiveLinkrole,
+                        ):
+                            raise ArelleModelInconsistency(
+                                ArelleDiagnostic.error(
+                                    "Hypercube is targeted by all/notAll relationships from more than one root primary item, which differ in arcrole, closed, context element or target linkrole",
+                                    elr=elrUri,
+                                    concepts=(rel.targetQName,),
+                                )
+                            )
+                        seen = {q for _, q in existing["primaryItems"]}
+                        added = [
+                            (indent, q)
+                            for indent, q in self.getPrimaryItems(
+                                rel.consecutiveLinkrole, root_concept
+                            )
+                            if q not in seen
+                        ]
+                        existing["primaryItems"].extend(added)
+                        primaryItemsByHypercube[rel.targetQName].update(
+                            q for _, q in added
+                        )
+                        continue
                     if not rel.isClosed:
                         self.diagnostics.emit(
                             ArelleDiagnostic.info(
@@ -1112,13 +1143,14 @@ class TaxonomyInfoExtractor:
                         "primaryItems": self.getPrimaryItems(
                             rel.consecutiveLinkrole, root_concept
                         ),
-                        "type": _hypercubeType(rel.arcrole, elrUri, rel.targetQName),
+                        "type": cubeType,
                         "xbrldt:contextElement": rel.contextElement,
                         "xbrldt:closed": rel.isClosed,
                     }
                     primaryItemsByHypercube[rel.targetQName].update(
                         q for _, q in cube["primaryItems"]
                     )
+                    targetLinkroles[rel.targetQName] = rel.consecutiveLinkrole
                     for dimensionRel in self.getDimensions(
                         rel.consecutiveLinkrole, concept, rel.isClosed
                     ):

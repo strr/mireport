@@ -1136,19 +1136,16 @@ class TestReportHypercubesForLinkrole:
 
 
 class TestExtractDimensionDefinitionsHypercubeCollision:
-    """Two different root primary items targeting the same hypercube in one
-    ELR is a shape mireport doesn't understand (which root's primary items
-    apply?) and would otherwise silently overwrite the first root's cube
-    entry -- extractDimensionDefinitions() must give up rather than guess."""
+    """Several root primary items targeting the same hypercube in one ELR (ESEF's
+    LineItemsNotDimensionallyQualified) are one cube over all their primary items,
+    if the arcs agree on what defines the cube; if they do not, there is no one cube
+    to record, and extractDimensionDefinitions() must give up rather than guess."""
 
     ELR = "https://example.com/elr"
 
-    def test_two_roots_targeting_same_hypercube_is_inconsistent(self) -> None:
-        rootA = StubConcept(qn("RootA"))
-        rootB = StubConcept(qn("RootB"))
-        table = StubConcept(qn("Table"), isHypercubeItem=True)
-        relA = conceptRel(table)
-        relB = conceptRel(table)
+    def extract(
+        self, relA: ConceptRelationship, relB: ConceptRelationship, rootA, rootB
+    ) -> dict[str, Any]:
         allNotAllRelSet = StubHypercubeDimensionRelSet(
             roots=[rootA, rootB],
             relsFrom={id(rootA): [relA], id(rootB): [relB]},
@@ -1165,10 +1162,29 @@ class TestExtractDimensionDefinitionsHypercubeCollision:
             linkrolesByArcrole={XbrlConst.all: [self.ELR]},
         )
         try:
-            with pytest.raises(ArelleModelInconsistency):
-                extractor.extractDimensionDefinitions()
+            extractor.extractDimensionDefinitions()
+            return extractor.taxonomyJson["dimensions"][self.ELR]
         finally:
             collectedDiagnostics(token)
+
+    def test_two_roots_with_the_same_arcs_are_one_cube_over_both(self) -> None:
+        rootA = StubConcept(qn("RootA"))
+        rootB = StubConcept(qn("RootB"))
+        table = StubConcept(qn("Table"), isHypercubeItem=True)
+        cubes = self.extract(conceptRel(table), conceptRel(table), rootA, rootB)
+        assert list(cubes) == [qn("Table")]
+        assert cubes[qn("Table")]["primaryItems"] == [
+            (0, qn("RootA")),
+            (0, qn("RootB")),
+        ]
+
+    def test_roots_whose_arcs_differ_are_inconsistent(self) -> None:
+        rootA = StubConcept(qn("RootA"))
+        rootB = StubConcept(qn("RootB"))
+        table = StubConcept(qn("Table"), isHypercubeItem=True)
+        relB = replace(conceptRel(table), isClosed=True)
+        with pytest.raises(ArelleModelInconsistency, match="differ"):
+            self.extract(conceptRel(table), relB, rootA, rootB)
 
 
 class TestExtractDimensionDefinitionsType:
