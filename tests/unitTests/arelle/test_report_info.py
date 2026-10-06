@@ -107,3 +107,32 @@ class TestMakeOptions:
         jsonOptions, validateOptions = seen
         assert jsonOptions.formulaAction == "none"
         assert validateOptions.formulaAction is None
+
+    def test_xbrl_json_with_taxonomy_loads_both_plugins_in_one_run(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from mireport.arelle import taxonomy_info
+        from mireport.arelle.diagnostics import DiagnosticCollector
+
+        processor = self.makeProcessor()
+        seen: list[Any] = []
+        tokens: list[str] = []
+
+        def fakeRun(source: Any, options: Any, responseZipStream: Any = None) -> Any:
+            seen.append(options)
+            tokens.append(options.diagnosticsToken)
+            raise StopIteration
+
+        monkeypatch.setattr(processor, "_run", fakeRun)
+        target = tmp_path / "taxonomy.json"
+        with pytest.raises(StopIteration):
+            processor.generateXBRLJsonWithTaxonomy(object(), target)  # type: ignore[arg-type]
+        (options,) = seen
+        assert options.plugins == f"saveLoadableOIM|{taxonomy_info.__file__}"
+        assert options.saveLoadableOIM == "report.json"
+        assert options.taxonomyDataFile == str(target)
+        assert options.formulaAction == "none"
+        assert options.validate is True
+        assert options.abortOnMajorError is True
+        # The diagnostics collector is closed even when the run raises.
+        assert not DiagnosticCollector.exists(tokens[0])

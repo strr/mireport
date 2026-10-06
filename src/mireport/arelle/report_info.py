@@ -15,6 +15,7 @@ from arelle import PackageManager, PluginManager
 from arelle.api.Session import Session
 from arelle.CntlrCmdLine import RuntimeOptions
 
+from mireport.arelle.diagnostics import DiagnosticCollector
 from mireport.arelle.support import (
     ArelleProcessingResult,
     ArelleRelatedException,
@@ -162,6 +163,7 @@ class ArelleReportProcessor:
         *,
         calcs: str = "c11r",
         formulaAction: str | None = None,
+        abortOnMajorError: bool | None = None,
         plugins: str | None = None,
         pluginOptions: dict | None = None,
     ) -> RuntimeOptions:
@@ -180,6 +182,7 @@ class ArelleReportProcessor:
             validate=True,
             calcs=calcs,
             formulaAction=formulaAction,
+            abortOnMajorError=abortOnMajorError,
             utrValidate=True,
             validateDuplicateFacts="inconsistent",
             showOptions=False,
@@ -194,12 +197,53 @@ class ArelleReportProcessor:
         return self._run(source, options)
 
     def generateXBRLJson(self, source: FilelikeAndFileName) -> ArelleProcessingResult:
+        return self._generateXBRLJson(
+            source,
+            plugins="saveLoadableOIM",
+            pluginOptions={"saveLoadableOIM": "report.json"},
+        )
+
+    def generateXBRLJsonWithTaxonomy(
+        self, source: FilelikeAndFileName, taxonomyDataFile: Path | str
+    ) -> ArelleProcessingResult:
+        """The xBRL-JSON, and in the same Arelle run (so the DTS is loaded and
+        validated once) the baked taxonomy JSON of the report's DTS, written to
+        `taxonomyDataFile` by the taxonomy-info plugin. The JSON's "entryPoint" is
+        None: a report arriving as a stream has no entry point file."""
+        from mireport.arelle import taxonomy_info
+
+        token = DiagnosticCollector.open()
+        try:
+            result = self._generateXBRLJson(
+                source,
+                plugins=f"saveLoadableOIM|{taxonomy_info.__file__}",
+                pluginOptions={
+                    "saveLoadableOIM": "report.json",
+                    "taxonomyDataFile": str(taxonomyDataFile),
+                    "diagnosticsToken": token,
+                },
+                abortOnMajorError=True,
+            )
+        finally:
+            diagnostics = DiagnosticCollector.close(token)
+        result.addDiagnostics(diagnostics)
+        return result
+
+    def _generateXBRLJson(
+        self,
+        source: FilelikeAndFileName,
+        *,
+        plugins: str,
+        pluginOptions: dict,
+        abortOnMajorError: bool | None = None,
+    ) -> ArelleProcessingResult:
         # The facts are the point here, not validation messages: formulas only
         # add time.
         options = self._makeOptions(
             formulaAction="none",
-            plugins="saveLoadableOIM",
-            pluginOptions={"saveLoadableOIM": "report.json"},
+            abortOnMajorError=abortOnMajorError,
+            plugins=plugins,
+            pluginOptions=pluginOptions,
         )
         jsonBytesIO = BytesIO()
         result = self._run(source, options, jsonBytesIO)
