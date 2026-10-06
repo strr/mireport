@@ -393,3 +393,61 @@ class TestBootstrapDefaultBoundNamespace:
         prefixMap = bootstrapped(model)
         assert prefixesOf(prefixMap) == []
         assert prefixesOf(prefixMap, other) == []
+
+
+class TestStructuredArelleMessages:
+    RECORD = {
+        "code": "calc11e:inconsistentCalculationUsingRounding",
+        "level": "inconsistency",
+        "refs": [
+            {"href": "a.html#f-1", "properties": [["QName", "ifrs-full:ComprehensiveIncome"]]},
+            {"href": "a.html#f-2", "properties": [["QName", "ifrs-full:ProfitLoss"]]},
+            {"href": "a.html#f-3", "properties": [["QName", "ifrs-full:ProfitLoss"]]},
+            {"href": "a.html#x", "properties": [["file", "a.html"]]},
+        ],
+        "message": {
+            "text": "Calculation inconsistent from ifrs-full:ComprehensiveIncome",
+            "args": {
+                "concept": "ifrs-full:ComprehensiveIncome",
+                "linkrole": "http://example.com/role/Statement",
+            },
+        },
+    }
+
+    def test_code_args_and_participating_concepts_are_kept(self) -> None:
+        result = ArelleProcessingResult.fromArelleLogs(
+            json.dumps({"log": [self.RECORD]}), []
+        )
+        [message] = result.messages
+        assert message.severity is Severity.WARNING
+        assert message.messageCode == "calc11e:inconsistentCalculationUsingRounding"
+        assert message.messageArgs == {
+            "concept": "ifrs-full:ComprehensiveIncome",
+            "linkrole": "http://example.com/role/Statement",
+        }
+        # The args' concept, then the refs' concepts, each once, in order.
+        assert message.concepts == ("ifrs-full:ComprehensiveIncome", "ifrs-full:ProfitLoss")
+        # The text is what it always was.
+        assert message.messageText.startswith(
+            "[calc11e:inconsistentCalculationUsingRounding] Calculation inconsistent"
+        )
+
+    def test_a_record_without_structure_has_none(self) -> None:
+        result = ArelleProcessingResult.fromArelleLogs(
+            makeJsonLog(("xbrl.5.2.5.2:calcInconsistency", "error", "Bad calc")), []
+        )
+        [message] = result.messages
+        assert message.messageCode == "xbrl.5.2.5.2:calcInconsistency"
+        assert message.messageArgs == {} and message.concepts == ()
+
+    def test_the_structure_survives_toDict_and_an_older_dict_still_loads(self) -> None:
+        result = ArelleProcessingResult.fromArelleLogs(
+            json.dumps({"log": [self.RECORD]}), []
+        )
+        [message] = result.messages
+        again = type(message).fromDict(message.toDict())
+        assert again.messageCode == message.messageCode
+        assert again.messageArgs == message.messageArgs
+        assert again.concepts == message.concepts
+        old = {"m": "x", "s": "INFO", "mt": "DevInfo", "c": None, "e": None}
+        assert type(message).fromDict(old).concepts == ()

@@ -5,6 +5,7 @@ import uuid
 from enum import StrEnum
 from functools import lru_cache
 from time import perf_counter_ns
+from collections.abc import Mapping, Sequence
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
@@ -121,12 +122,20 @@ class Message:
         messageType: MessageType,
         conceptQName: str | None = None,
         excelReference: str | None = None,
+        messageCode: str | None = None,
+        messageArgs: Mapping[str, str] | None = None,
+        concepts: Sequence[str] = (),
     ):
         self.messageText: MessageText = MessageText(messageText)
         self.severity: Severity = severity
         self.messageType: MessageType = messageType
         self.conceptQName: str | None = conceptQName
         self.excelReference: str | None = excelReference
+        # What a structured Arelle record carries beyond its text: the rule's code, the
+        # named arguments of its message, and the concepts of the objects it concerns.
+        self.messageCode: str | None = messageCode
+        self.messageArgs: dict[str, str] = dict(messageArgs or {})
+        self.concepts: tuple[str, ...] = tuple(concepts)
 
     def __str__(self) -> str:
         bits = [
@@ -147,7 +156,16 @@ class Message:
         mt = MessageType[stuff["mt"]]
         c = stuff["c"]
         e = stuff["e"]
-        return cls(m, s, mt, c, e)
+        return cls(
+            m,
+            s,
+            mt,
+            c,
+            e,
+            messageCode=stuff.get("code"),
+            messageArgs=stuff.get("args"),
+            concepts=stuff.get("concepts", ()),
+        )
 
     def toDict(self) -> dict:
         d = {
@@ -157,6 +175,12 @@ class Message:
             "c": self.conceptQName,
             "e": self.excelReference,
         }
+        if self.messageCode is not None:
+            d["code"] = self.messageCode
+        if self.messageArgs:
+            d["args"] = dict(self.messageArgs)
+        if self.concepts:
+            d["concepts"] = list(self.concepts)
         return d
 
 

@@ -114,12 +114,19 @@ class ArelleProcessingResult:
                     level, default=Severity.WARNING
                 )
                 code_severity = Severity.fromLogLevelString(code, default=Severity.INFO)
+                args = {
+                    str(k): str(v)
+                    for k, v in (r.get("message", {}).get("args") or {}).items()
+                }
                 self._validationMessages.append(
                     Message(
                         messageText=f"[{code}] {text}",
                         severity=max(level_severity, code_severity, key=Severity.key),
                         messageType=MessageType.XbrlValidation,
                         conceptQName=fact,
+                        messageCode=code,
+                        messageArgs=args,
+                        concepts=self._participating_concepts(args, r.get("refs")),
                     )
                 )
             elif code == "" or any(
@@ -141,6 +148,21 @@ class ArelleProcessingResult:
                 L.warning(
                     f"Unexpected Arelle log message: {code=} {level=} {text=} {fact=}"
                 )
+
+    @staticmethod
+    def _participating_concepts(
+        args: dict[str, str], refs: list[dict] | None
+    ) -> tuple[str, ...]:
+        """The concept named by the message's own ``concept`` argument, then the QName
+        of each object the record refers to, each once, in order."""
+        found: dict[str, None] = {}
+        if concept := args.get("concept"):
+            found[concept] = None
+        for ref in refs or ():
+            for prop in ref.get("properties", ()):
+                if prop and prop[0] == "QName" and len(prop) > 1 and prop[1]:
+                    found[str(prop[1])] = None
+        return tuple(found)
 
     @property
     def viewer(self) -> FilelikeAndFileName:
