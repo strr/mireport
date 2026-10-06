@@ -122,7 +122,9 @@ class StubValidatedModel:
         # roleURI -> StubRoleType, for declaredRoleType(); set per test.
         self._roleTypes: dict[str, StubRoleType] = {}
 
-    def declaredRoleType(self, roleUri: str) -> StubRoleType | None:
+    def declaredRoleType(
+        self, roleUri: str, onDuplicate: Any = None
+    ) -> StubRoleType | None:
         return self._roleTypes.get(roleUri)
 
     def resourceRelationshipsFrom(

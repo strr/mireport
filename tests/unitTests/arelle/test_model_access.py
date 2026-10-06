@@ -6,6 +6,7 @@ tests/integrationTests/test_taxonomy_info_regeneration.py; these tests cover
 the narrowing/consistency logic using lightweight stubs.
 """
 
+import logging
 from typing import Any, cast
 from unittest.mock import MagicMock
 
@@ -15,6 +16,7 @@ from arelle.ModelDtsObject import ModelConcept, ModelRoleType
 from arelle.ModelValue import QName
 from arelle.ModelXbrl import ModelXbrl
 
+from mireport.arelle.diagnostics import ArelleDiagnostic
 from mireport.arelle.model_access import (
     ConceptRelationship,
     ConceptRelationshipSet,
@@ -106,6 +108,12 @@ class StubRelSet:
 
     def toModelObject(self, obj: Any) -> list[StubRel]:
         return self._toMap.get(id(obj), [])
+
+
+class StubRoleType:
+    def __init__(self, definition: str | None, usedOns: set[str]) -> None:
+        self.definition = definition
+        self.usedOns = usedOns
 
 
 class StubModelXbrl:
@@ -604,6 +612,45 @@ class TestValidatedModel:
     ) -> None:
         model = makeModel(StubModelXbrl(roleTypes=roleTypes))
         assert model.declaredRoleType("https://example.com/role") is None
+
+    def test_role_type_dedupes_agreeing_duplicates_with_one_warning(self) -> None:
+        roleUri = "https://example.com/role"
+        first = StubRoleType("a role", {"link:definitionLink"})
+        second = StubRoleType("a role", {"link:definitionLink"})
+        model = makeModel(StubModelXbrl(roleTypes={roleUri: [first, second]}))
+        emitted: list[ArelleDiagnostic] = []
+        assert model.roleType(roleUri, emitted.append) is cast(ModelRoleType, first)
+        assert model.roleType(roleUri, emitted.append) is cast(ModelRoleType, first)
+        assert len(emitted) == 1
+        assert emitted[0].level == logging.WARNING
+        assert roleUri in emitted[0].format()
+
+    @pytest.mark.parametrize(
+        "other",
+        [
+            StubRoleType("another definition", {"link:definitionLink"}),
+            StubRoleType("a role", {"link:calculationLink"}),
+        ],
+        ids=["definition", "usedOn"],
+    )
+    def test_role_type_raises_on_disagreeing_duplicates(
+        self, other: StubRoleType
+    ) -> None:
+        roleUri = "https://example.com/role"
+        first = StubRoleType("a role", {"link:definitionLink"})
+        model = makeModel(StubModelXbrl(roleTypes={roleUri: [first, other]}))
+        with pytest.raises(ArelleModelInconsistency):
+            model.roleType(roleUri, lambda d: None)
+
+    def test_declared_role_type_dedupes_agreeing_duplicates(self) -> None:
+        roleUri = "https://example.com/role"
+        first = StubRoleType("a role", set())
+        model = makeModel(
+            StubModelXbrl(roleTypes={roleUri: [first, StubRoleType("a role", set())]})
+        )
+        assert model.declaredRoleType(roleUri, lambda d: None) is cast(
+            ModelRoleType, first
+        )
 
     def test_declared_role_type_raises_on_two(self) -> None:
         roleUri = "https://example.com/role"

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import Literal, NamedTuple, Self, TypeGuard, get_args
+from typing import Any, Literal, NamedTuple, Self, TypeGuard, get_args
 
 from arelle import XbrlConst
 from arelle.ModelDtsObject import (
@@ -238,6 +238,7 @@ class ValidatedModel:
 
     def __init__(self, modelXbrl: ModelXbrl) -> None:
         self._modelXbrl = modelXbrl
+        self._warnedDuplicateRoles: set[str] = set()
 
     @property
     def conceptCount(self) -> int:
@@ -439,8 +440,33 @@ class ValidatedModel:
             )
         return element
 
-    def roleType(self, roleUri: str) -> ModelRoleType:
+    def roleType(
+        self,
+        roleUri: str,
+        onDuplicate: Callable[[ArelleDiagnostic], None] | None = None,
+    ) -> ModelRoleType:
+        """The one roleType declared for roleUri.
+
+        A DTS that declares the same role twice (a company schema repeating
+        ESMA's esef_role-999999) is accepted only when `onDuplicate` is given
+        and every declaration agrees on definition and usedOn: the first is
+        returned and one warning per role goes to `onDuplicate`. Labels are
+        not compared. Disagreeing duplicates still raise."""
         matching = self._modelXbrl.roleTypes.get(roleUri, [])
+        if len(matching) > 1 and onDuplicate is not None:
+            first = matching[0]
+            if all(self._roleTypesAgree(first, other) for other in matching[1:]):
+                if roleUri not in self._warnedDuplicateRoles:
+                    self._warnedDuplicateRoles.add(roleUri)
+                    onDuplicate(
+                        ArelleDiagnostic.warning(
+                            "Role declared more than once with the same definition"
+                            " and usedOn; using the first declaration",
+                            elr=roleUri,
+                            declarations=len(matching),
+                        )
+                    )
+                return first
         if (num := len(matching)) != 1:
             raise ArelleModelInconsistency(
                 ArelleDiagnostic.error(
@@ -451,7 +477,17 @@ class ValidatedModel:
             )
         return matching[0]
 
-    def declaredRoleType(self, roleUri: str) -> ModelRoleType | None:
+    @staticmethod
+    def _roleTypesAgree(a: Any, b: Any) -> bool:
+        return getattr(a, "definition", None) == getattr(b, "definition", None) and (
+            getattr(a, "usedOns", None) == getattr(b, "usedOns", None)
+        )
+
+    def declaredRoleType(
+        self,
+        roleUri: str,
+        onDuplicate: Callable[[ArelleDiagnostic], None] | None = None,
+    ) -> ModelRoleType | None:
         """The roleType the DTS declares for roleUri, or None if it declares
         none -- the normal case for a role XBRL 2.1 itself predefines (e.g.
         http://www.xbrl.org/2003/role/reference), which needs no roleType.
@@ -459,4 +495,4 @@ class ValidatedModel:
         declaration is not an inconsistency here; more than one still is."""
         if not self._modelXbrl.roleTypes.get(roleUri):
             return None
-        return self.roleType(roleUri)
+        return self.roleType(roleUri, onDuplicate)

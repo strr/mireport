@@ -864,7 +864,8 @@ class TaxonomyInfoExtractor:
         roles = sorted({entry["role"] for entry in self._references.values()})
         referenceRoles: dict[str, dict[str, Any]] = {}
         for role in roles:
-            if (roleType := self.model.declaredRoleType(role)) is None:
+            roleType = self.model.declaredRoleType(role, self.diagnostics.emit)
+            if roleType is None:
                 continue
             jrole: dict[str, Any] = {}
             if (definition := roleType.definition) is not None:
@@ -887,7 +888,8 @@ class TaxonomyInfoExtractor:
         Purely additive: "presentation" entries are unchanged."""
         roles: dict[str, dict[str, Any]] = {}
         for elrUri in sorted({linkrole for _, linkrole in self.model.baseSetsInDTS()}):
-            if (roleType := self.model.declaredRoleType(elrUri)) is None:
+            roleType = self.model.declaredRoleType(elrUri, self.diagnostics.emit)
+            if roleType is None:
                 continue
             jrole: dict[str, Any] = {}
             if (definition := roleType.definition) is not None:
@@ -1308,7 +1310,7 @@ class TaxonomyInfoExtractor:
         self.cntlr.addToLog("Processing presentation network")
         for elrUri in self.model.linkrolesFor(XbrlConst.parentChild):
             self.cntlr.addToLog(f"Processing {elrUri}")
-            roleType = self.model.roleType(elrUri)
+            roleType = self.model.roleType(elrUri, self.diagnostics.emit)
             self.taxonomyJson["presentation"][elrUri] = {
                 "definition": roleType.definition,
             }
