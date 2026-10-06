@@ -161,6 +161,7 @@ class ArelleReportProcessor:
         self,
         *,
         calcs: str = "c11r",
+        formulaAction: str | None = None,
         plugins: str | None = None,
         pluginOptions: dict | None = None,
     ) -> RuntimeOptions:
@@ -178,6 +179,7 @@ class ArelleReportProcessor:
             pluginOptions=pluginOptions if pluginOptions is not None else {},
             validate=True,
             calcs=calcs,
+            formulaAction=formulaAction,
             utrValidate=True,
             validateDuplicateFacts="inconsistent",
             showOptions=False,
@@ -192,7 +194,10 @@ class ArelleReportProcessor:
         return self._run(source, options)
 
     def generateXBRLJson(self, source: FilelikeAndFileName) -> ArelleProcessingResult:
+        # The facts are the point here, not validation messages: formulas only
+        # add time.
         options = self._makeOptions(
+            formulaAction="none",
             plugins="saveLoadableOIM",
             pluginOptions={"saveLoadableOIM": "report.json"},
         )

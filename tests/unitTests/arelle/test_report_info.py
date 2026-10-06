@@ -82,3 +82,28 @@ class TestMakeOptions:
         assert options.plugins == "saveLoadableOIM"
         # RuntimeOptions flattens pluginOptions into attributes via setattr
         assert options.saveLoadableOIM == "out.json"
+
+    def test_formulas_run_by_default(self) -> None:
+        assert self.makeProcessor()._makeOptions().formulaAction is None
+
+    def test_formula_action_can_be_overridden(self) -> None:
+        options = self.makeProcessor()._makeOptions(formulaAction="none")
+        assert options.formulaAction == "none"
+
+    def test_xbrl_json_generation_skips_formulas_but_report_validation_keeps_them(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        processor = self.makeProcessor()
+        seen: list[Any] = []
+
+        def fakeRun(source: Any, options: Any, responseZipStream: Any = None) -> Any:
+            seen.append(options)
+            raise StopIteration
+
+        monkeypatch.setattr(processor, "_run", fakeRun)
+        for call in (processor.generateXBRLJson, processor.validateReportPackage):
+            with pytest.raises(StopIteration):
+                call(object())  # type: ignore[arg-type]
+        jsonOptions, validateOptions = seen
+        assert jsonOptions.formulaAction == "none"
+        assert validateOptions.formulaAction is None
