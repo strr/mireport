@@ -16,14 +16,16 @@ LABELS = "https://example.com/labels.xml"
 DOCS = "https://example.com/docs.xml"
 
 
-def optionsFor(entry_point: str | list[str]) -> RuntimeOptions:
+def optionsFor(entry_point: str | list[str], **kwargs: bool) -> RuntimeOptions:
     """Run callArelleForTaxonomyInfo with Arelle stubbed out, returning the
     RuntimeOptions it would have handed to Arelle."""
     with (
         patch.object(taxonomy_info, "Session") as session,
         patch.object(taxonomy_info.ArelleProcessingResult, "fromSession"),
     ):
-        taxonomy_info.callArelleForTaxonomyInfo(entry_point, [], "taxonomy.json")
+        taxonomy_info.callArelleForTaxonomyInfo(
+            entry_point, [], "taxonomy.json", **kwargs
+        )
     run = session.return_value.__enter__.return_value.run
     run.assert_called_once()
     return run.call_args.args[0]
@@ -46,6 +48,15 @@ def test_extra_documents_are_imported_into_the_one_dts() -> None:
     options = optionsFor([ENTRY_POINT, LABELS, DOCS])
     assert options.entrypointFile == ENTRY_POINT
     assert options.importFiles == f"{LABELS}|{DOCS}"
+
+
+def test_check_base_hygiene_defaults_on() -> None:
+    assert optionsFor(ENTRY_POINT).checkBaseHygiene is True  # type: ignore[attr-defined]
+
+
+def test_check_base_hygiene_passes_through() -> None:
+    options = optionsFor(ENTRY_POINT, check_base_hygiene=False)
+    assert options.checkBaseHygiene is False  # type: ignore[attr-defined]
 
 
 def test_no_entry_point_document() -> None:

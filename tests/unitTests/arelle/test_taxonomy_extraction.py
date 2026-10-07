@@ -213,11 +213,13 @@ def makeExtractor(
     baseSets: list[tuple[str, str]] | None = None,
     items: list[tuple[QName, Any]] | None = None,
     typeQNamesByQName: dict[QName, tuple[QName, QName]] | None = None,
+    options: dict[str, Any] | None = None,
 ) -> tuple[TaxonomyInfoExtractor, str]:
-    """Build an extractor over stubs, with a diagnostics collector attached."""
+    """Build an extractor over stubs, with a diagnostics collector attached.
+    `options` adds attributes to the stub RuntimeOptions."""
     token = DiagnosticCollector.open()
     stubModel = SimpleNamespace(qnameConcepts={}, qnameTypes={})
-    options = SimpleNamespace(diagnosticsToken=token)
+    options = SimpleNamespace(diagnosticsToken=token, **(options or {}))
     extractor = TaxonomyInfoExtractor(
         cast(Cntlr, StubCntlr()),
         cast(RuntimeOptions, options),
@@ -1550,6 +1552,55 @@ class TestReportIsolatedConcepts:
             },
             linkrolesByArcrole={XbrlConst.dimensionDomain: [self.ELR]},
         )
+        assert diagnostics == []
+
+
+class TestCheckBaseHygieneOption:
+    ELR = "https://example.com/elr"
+
+    def runExtract(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        options: dict[str, Any] | None = None,
+    ) -> list[ArelleDiagnostic]:
+        extractor, token = makeExtractor(
+            {},
+            {(XbrlConst.parentChild, self.ELR): StubDomainMemberRelSet({})},
+            baseSets=[(XbrlConst.parentChild, self.ELR)],
+            items=[(qn("Orphan"), StubConcept(qn("Orphan")))],
+            options={"entrypointFile": None, **(options or {})},
+        )
+        for name in (
+            "extractPresentation",
+            "extractCalculation",
+            "extractAnchoring",
+            "extractRoles",
+            "extractDimensionDefaults",
+            "extractDimensionDefinitions",
+            "reportDomainMemberOnlyLinkroleRoots",
+            "extractConceptsAndMetadata",
+            "extractReferences",
+        ):
+            monkeypatch.setattr(extractor, name, lambda: None)
+        extractor.extract()
+        return collectedDiagnostics(token)
+
+    def test_isolated_concept_checks_run_by_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        diagnostics = self.runExtract(monkeypatch)
+        assert any("no relationship in any linkbase" in d.text for d in diagnostics)
+
+    def test_isolated_concept_checks_run_when_flag_true(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        diagnostics = self.runExtract(monkeypatch, {"checkBaseHygiene": True})
+        assert any("no relationship in any linkbase" in d.text for d in diagnostics)
+
+    def test_isolated_concept_checks_skipped_when_flag_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        diagnostics = self.runExtract(monkeypatch, {"checkBaseHygiene": False})
         assert diagnostics == []
 
 

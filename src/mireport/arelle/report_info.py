@@ -221,6 +221,7 @@ class ArelleReportProcessor:
                     "saveLoadableOIM": "report.json",
                     "taxonomyDataFile": str(taxonomyDataFile),
                     "diagnosticsToken": token,
+                    "checkBaseHygiene": False,
                 },
                 abortOnMajorError=True,
             )

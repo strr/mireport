@@ -234,7 +234,10 @@ class TaxonomyInfoExtractor:
         self.reportDomainMemberOnlyLinkroleRoots()
         self.extractConceptsAndMetadata()
         self.extractReferences()
-        self.reportIsolatedConcepts()
+        # Base hygiene (isolated concepts) is the taxonomy author's concern, so
+        # report processing turns it off via the checkBaseHygiene plugin option.
+        if getattr(self.options, "checkBaseHygiene", True):
+            self.reportIsolatedConcepts()
 
         self.cntlr.addToLog("Processing namespaces and namespace prefixes")
         self.taxonomyJson = self.qnameConverter.convertRecursive(self.taxonomyJson)

@@ -131,6 +131,7 @@ class TestMakeOptions:
         assert options.plugins == f"saveLoadableOIM|{taxonomy_info.__file__}"
         assert options.saveLoadableOIM == "report.json"
         assert options.taxonomyDataFile == str(target)
+        assert options.checkBaseHygiene is False
         assert options.formulaAction == "none"
         assert options.validate is True
         assert options.abortOnMajorError is True

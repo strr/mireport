@@ -52,6 +52,7 @@ def callArelleForTaxonomyInfo(
     taxonomy_zips: list[str],
     taxonomy_json_path: Path | str,
     utr_json_path: Path | str | None = None,
+    check_base_hygiene: bool = True,
 ) -> ArelleProcessingResult:
     diagnosticsToken = DiagnosticCollector.open()
     # N.B. paths must cross the Arelle boundary as str: RuntimeOptions applies
@@ -60,6 +61,7 @@ def callArelleForTaxonomyInfo(
     pluginOptions: dict[str, RuntimeOptionValue] = {
         "taxonomyDataFile": str(taxonomy_json_path),
         "diagnosticsToken": diagnosticsToken,
+        "checkBaseHygiene": check_base_hygiene,
     }
     utrValidation = False
     if utr_json_path is not None:
