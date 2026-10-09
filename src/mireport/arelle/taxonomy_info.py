@@ -26,6 +26,7 @@ from arelle.utils.PluginData import PluginData
 
 import mireport
 from mireport.arelle.diagnostics import DiagnosticCollector
+from mireport.arelle.report_findings import invalid_fact_diagnostics
 from mireport.arelle.support import (
     ArelleProcessingResult,
     ArelleRelatedException,
@@ -136,6 +137,8 @@ def runTaxonomyInfo(
     pdata = pluginData(cntlr)
     extractor = TaxonomyInfoExtractor(cntlr, options, modelXbrl)
     pdata.Taxonomy.update(extractor.extract())
+    for diagnostic in invalid_fact_diagnostics(modelXbrl):
+        extractor.diagnostics.emit(diagnostic)
     if options.utrValidate:
         cntlr.addToLog("UTR validation is on so attempting to process UTR entries")
         pdata.UTR.update(UTRInfoExtractor(cntlr, modelXbrl).extract())

@@ -17,6 +17,7 @@ from arelle.ModelValue import QName
 from arelle.ModelXbrl import ModelXbrl
 
 from mireport.arelle.diagnostics import ArelleDiagnostic
+from mireport.arelle.report_findings import InvalidFact, as_invalid_fact
 from mireport.conversionresults import Message, MessageType, Severity
 from mireport.exceptions import MIReportException
 from mireport.filesupport import FilelikeAndFileName
@@ -80,6 +81,7 @@ class ArelleProcessingResult:
         self._xbrlJson: FilelikeAndFileName | None = None
         self._exceptions: list[Exception] = []
         self._diagnostics: list[ArelleDiagnostic] = []
+        self._invalidFacts: list[InvalidFact] = []
 
     @classmethod
     def fromSession(cls, session: Session) -> Self:
@@ -197,7 +199,16 @@ class ArelleProcessingResult:
         return list(self._textLogLines)
 
     def addDiagnostics(self, diagnostics: Iterable[ArelleDiagnostic]) -> None:
-        self._diagnostics.extend(diagnostics)
+        for diagnostic in diagnostics:
+            if (invalid := as_invalid_fact(diagnostic)) is not None:
+                self._invalidFacts.append(invalid)
+            else:
+                self._diagnostics.append(diagnostic)
+
+    @property
+    def invalid_facts(self) -> list[InvalidFact]:
+        """The facts whose value failed their datatype (xBRL-JSON writes those as nil)."""
+        return list(self._invalidFacts)
 
     @property
     def diagnostics(self) -> list[ArelleDiagnostic]:
