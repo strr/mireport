@@ -111,7 +111,9 @@ class StubValidatedModel:
         baseSets: list[tuple[str, str]] | None = None,
         items: list[tuple[QName, Any]] | None = None,
         typeQNamesByQName: dict[QName, tuple[QName, QName]] | None = None,
+        tuples: list[QName] | None = None,
     ) -> None:
+        self._tuples = tuples or []
         self._relsByArcrole = relsByArcrole
         self._conceptRelSets = conceptRelSets or {}
         self._linkrolesByArcrole = linkrolesByArcrole or {}
@@ -169,6 +171,12 @@ class StubValidatedModel:
     def concept(self, qname: QName) -> Any:
         return self._conceptsByQName[qname]
 
+    def tupleConcepts(self) -> Iterator[QName]:
+        yield from self._tuples
+
+    def roleType(self, roleURI: str, emit: Any) -> StubRoleType:
+        return self._roleTypes.get(roleURI) or StubRoleType(roleURI)
+
 
 def labelRel(resource: StubLabelResource) -> ResourceRelationship:
     return ResourceRelationship(
@@ -214,6 +222,7 @@ def makeExtractor(
     items: list[tuple[QName, Any]] | None = None,
     typeQNamesByQName: dict[QName, tuple[QName, QName]] | None = None,
     options: dict[str, Any] | None = None,
+    tuples: list[QName] | None = None,
 ) -> tuple[TaxonomyInfoExtractor, str]:
     """Build an extractor over stubs, with a diagnostics collector attached.
     `options` adds attributes to the stub RuntimeOptions."""
@@ -234,6 +243,7 @@ def makeExtractor(
             baseSets,
             items,
             typeQNamesByQName,
+            tuples,
         ),
     )
     return extractor, token
@@ -2545,3 +2555,77 @@ class TestExtractRoles:
             self.PRES: {"definition": "Pres", "rows": []}
         }
         assert extractor.taxonomyJson["roles"] == {self.PRES: {"definition": "Pres"}}
+
+
+class TestTuples:
+    """Tuples are not modelled (yet): the bake names them, leaves their
+    presentation rows out and says so."""
+
+    ELR = "https://example.com/elr"
+
+    def extractPresentation(
+        self,
+        tuples: list[QName],
+        rootsAndRels: tuple[list[StubConcept], dict[int, list[ConceptRelationship]]],
+    ) -> tuple[dict[str, Any], list[ArelleDiagnostic]]:
+        roots, relsFrom = rootsAndRels
+        relSet = StubLinkroleRelSet(self.ELR, relsFrom, roots=roots)
+        extractor, token = makeExtractor(
+            {XbrlConst.elementLabel: []},
+            conceptRelSets={self.ELR: relSet},
+            linkrolesByArcrole={XbrlConst.parentChild: [self.ELR]},
+            tuples=tuples,
+        )
+        extractor.extractPresentation()
+        return extractor.taxonomyJson, collectedDiagnostics(token)
+
+    def test_a_tuple_row_is_left_out_and_its_descendants_move_up(self) -> None:
+        section, table, row, cell, after = (
+            StubConcept(qn(n)) for n in ("Section", "Table", "Row", "Cell", "After")
+        )
+        rels = {
+            id(section): [conceptRel(table), conceptRel(after)],
+            id(table): [conceptRel(row)],
+            id(row): [conceptRel(cell)],
+        }
+        taxonomyJson, _ = self.extractPresentation(
+            [qn("Table"), qn("Row")], ([section], rels)
+        )
+        rows = taxonomyJson["presentation"][self.ELR]["rows"]
+        assert rows == [
+            (0, qn("Section")),
+            (1, qn("Cell")),
+            (1, qn("After")),
+        ]
+
+    def test_a_tuple_root_makes_its_children_roots(self) -> None:
+        table, cell, other = (StubConcept(qn(n)) for n in ("Table", "Cell", "Other"))
+        rels = {id(table): [conceptRel(cell), conceptRel(other)]}
+        taxonomyJson, _ = self.extractPresentation([qn("Table")], ([table], rels))
+        assert taxonomyJson["presentation"][self.ELR]["rows"] == [
+            (0, qn("Cell")),
+            (0, qn("Other")),
+        ]
+
+    def test_no_tuples_changes_nothing(self) -> None:
+        section, cell = StubConcept(qn("Section")), StubConcept(qn("Cell"))
+        rels = {id(section): [conceptRel(cell)]}
+        taxonomyJson, _ = self.extractPresentation([], ([section], rels))
+        assert taxonomyJson["presentation"][self.ELR]["rows"] == [
+            (0, qn("Section")),
+            (1, qn("Cell")),
+        ]
+
+    def test_tuples_are_named_in_the_baked_json(self) -> None:
+        extractor, token = makeExtractor({}, tuples=[qn("Table"), qn("Row")])
+        extractor.extractTuples()
+        assert extractor.taxonomyJson["tuples"] == [qn("Row"), qn("Table")]
+        (diagnostic,) = collectedDiagnostics(token)
+        assert "Tuples are not supported" in diagnostic.text
+        assert set(diagnostic.concepts) == {qn("Table"), qn("Row")}
+
+    def test_no_tuples_no_section_and_no_diagnostic(self) -> None:
+        extractor, token = makeExtractor({})
+        extractor.extractTuples()
+        assert "tuples" not in extractor.taxonomyJson
+        assert collectedDiagnostics(token) == []

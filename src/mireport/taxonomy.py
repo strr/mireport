@@ -1321,6 +1321,7 @@ class Taxonomy:
         anchoring: Mapping[str, Mapping[str, Any]] | None = None,
         referenceRoles: Mapping[str, Mapping[str, Any]] | None = None,
         roles: Mapping[str, Mapping[str, Any]] | None = None,
+        tuples: Iterable[str] | None = None,
     ) -> None:
         # presentation, dimensions and calculation are only ever read, never
         # modified, so the same parsed JSON can back any number of Taxonomy
@@ -1380,6 +1381,10 @@ class Taxonomy:
         self._anchoring: tuple[AnchoringGroup, ...] = tuple(
             self._anchoringGroupFromJSON(roleUri, bits)
             for roleUri, bits in sorted((anchoring or {}).items())
+        )
+
+        self._tupleConcepts: frozenset[QName] = frozenset(
+            qnameMaker.fromString(tupleQName) for tupleQName in (tuples or ())
         )
 
         self._lookupConceptsByName: dict[str, list[Concept]] = defaultdict(list)
@@ -1658,6 +1663,9 @@ class Taxonomy:
             # before reference roles were extracted.
             referenceRoles=bits.get("referenceRoles"),
             roles=bits.get("roles"),
+            # Absent when the DTS has no tuples and in JSON baked before they
+            # were named.
+            tuples=bits.get("tuples"),
         )
 
     def _calculationArcroleFromJSON(
@@ -1947,6 +1955,12 @@ class Taxonomy:
         by roleUri. Empty if the taxonomy has none or its JSON predates them
         being extracted."""
         return self._anchoring
+
+    @property
+    def tupleConcepts(self) -> frozenset[QName]:
+        """The tuple concepts of the DTS, which are not concepts of this
+        taxonomy (tuples are not modelled). Empty if the DTS has none."""
+        return self._tupleConcepts
 
     @property
     def calculationArcrole(self) -> CalculationArcrole | None:

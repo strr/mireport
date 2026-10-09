@@ -310,6 +310,15 @@ class ValidatedModel:
                 continue
             yield qname, concept
 
+    def tupleConcepts(self) -> Iterator[QName]:
+        """Yield the qname of each tuple concept (not the xbrli infrastructure)."""
+        for concept in self._modelXbrl.qnameConcepts.values():
+            if not concept.isTuple:
+                continue
+            qname = qnameOf(concept)
+            if qname.namespaceURI != XbrlConst.xbrli:
+                yield qname
+
     def concept(self, qname: QName) -> ModelConcept:
         try:
             return self._modelXbrl.qnameConcepts[qname]

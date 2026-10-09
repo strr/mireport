@@ -131,6 +131,21 @@ class PresentationRow(NamedTuple):
     preferredLabel: str | None
 
 
+def without_tuple_rows(
+    rows: Iterable[PresentationRow], tuples: Collection[QName]
+) -> Iterator[PresentationRow]:
+    """`rows` (a depth-first presentation walk) without the rows of `tuples`.
+    The descendants of a left-out row move up a level, so the tree stays whole."""
+    leftOut: list[int] = []  # indents of the left-out rows that enclose the current row
+    for row in rows:
+        while leftOut and leftOut[-1] >= row.indent:
+            leftOut.pop()
+        if row.qname in tuples:
+            leftOut.append(row.indent)
+            continue
+        yield row._replace(indent=row.indent - len(leftOut))
+
+
 def writeDataFile(
     cntlr: Cntlr,
     jsonPath: str | Path,
@@ -223,6 +238,7 @@ class TaxonomyInfoExtractor:
         dict with all QNames canonicalised to strings."""
         self.taxonomyJson["entryPoint"] = self.options.entrypointFile
 
+        self.extractTuples()
         self.extractPresentation()
         self.extractCalculation()
         self.extractAnchoring()
@@ -1309,7 +1325,25 @@ class TaxonomyInfoExtractor:
                 )
         return labels
 
+    def extractTuples(self) -> None:
+        """Write the top-level "tuples" section: the qnames of the DTS's tuple
+        concepts, sorted, and only when there are any. Tuples are not modelled,
+        so nothing of a tuple but its name is kept; the presentation rows of a
+        tuple are left out (see extractPresentation())."""
+        tuples = sorted(self.model.tupleConcepts(), key=lambda q: str(q))
+        if not tuples:
+            return
+        self.taxonomyJson["tuples"] = tuples
+        self.diagnostics.emit(
+            ArelleDiagnostic.warning(
+                f"Tuples are not supported: {len(tuples)} tuple concept(s) are named "
+                "but their presentation rows and their facts are left out",
+                concepts=tuples,
+            ),
+        )
+
     def extractPresentation(self) -> None:
+        tuples = frozenset(self.model.tupleConcepts())
         self.cntlr.addToLog("Processing presentation network")
         for elrUri in self.model.linkrolesFor(XbrlConst.parentChild):
             self.cntlr.addToLog(f"Processing {elrUri}")
@@ -1337,15 +1371,16 @@ class TaxonomyInfoExtractor:
                             concepts=(qnameOf(root) for root in roots),
                         ),
                     )
-            rows: list[tuple[int, QName] | tuple[int, QName, str]] = []
+            walk: list[PresentationRow] = []
             for root in roots:
-                rows.append((0, qnameOf(root)))
-                rows.extend(
-                    (row.indent, row.qname)
-                    if row.preferredLabel is None
-                    else (row.indent, row.qname, row.preferredLabel)
-                    for row in self.walkPresentationChildren(root, relSet, 1)
-                )
+                walk.append(PresentationRow(0, qnameOf(root), None))
+                walk.extend(self.walkPresentationChildren(root, relSet, 1))
+            rows: list[tuple[int, QName] | tuple[int, QName, str]] = [
+                (row.indent, row.qname)
+                if row.preferredLabel is None
+                else (row.indent, row.qname, row.preferredLabel)
+                for row in without_tuple_rows(walk, tuples)
+            ]
             self.taxonomyJson["presentation"][elrUri]["rows"] = rows
         self.cntlr.addToLog("Processing presentation network [completed]")
 
