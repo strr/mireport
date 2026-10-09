@@ -9,12 +9,19 @@ from pathlib import Path, PurePath
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from typing import BinaryIO
 
 from arelle import PackageManager, PluginManager
 from arelle.api.Session import Session
 from arelle.CntlrCmdLine import RuntimeOptions
 
+from mireport.arelle.capabilities import (
+    ArelleCapability,
+    default_plugin_directory,
+    detect_capabilities,
+    plugins_for,
+)
 from mireport.arelle.diagnostics import DiagnosticCollector
 from mireport.arelle.support import (
     ArelleProcessingResult,
@@ -82,11 +89,32 @@ class ArelleReportProcessor:
         *,
         taxonomyPackages: list[Path] | None = None,
         workOffline: bool = True,
+        pluginDirectory: Path | None = None,
+        capabilities: Iterable[ArelleCapability] | None = None,
     ):
+        """`capabilities` names what every report needs from Arelle; left as None,
+        each report's own content decides (see `detect_capabilities`). Plug-ins that
+        Arelle does not bundle are found under `pluginDirectory`, by default the
+        directory named by MIREPORT_ARELLE_PLUGINS."""
         self.workOffline = bool(workOffline)
+        self.pluginDirectory = pluginDirectory
+        self.capabilities: frozenset[ArelleCapability] | None = (
+            None if capabilities is None else frozenset(capabilities)
+        )
         self.taxonomyPackages: list[Path] = []
         if taxonomyPackages is not None:
             self.taxonomyPackages.extend(taxonomyPackages)
+
+    def _plugins(self, source: FilelikeAndFileName, *always: str) -> str | None:
+        """The plug-ins a run needs: `always`, then those for the report's capabilities."""
+        capabilities = (
+            detect_capabilities(source)
+            if self.capabilities is None
+            else self.capabilities
+        )
+        directory = self.pluginDirectory or default_plugin_directory()
+        plugins = [*always, *plugins_for(capabilities, directory)]
+        return "|".join(plugins) if plugins else None
 
     def _run(
         self,
@@ -193,13 +221,14 @@ class ArelleReportProcessor:
     ) -> ArelleProcessingResult:
         options = self._makeOptions(
             calcs="none" if disableCalculationValidation else "c11r",
+            plugins=self._plugins(source),
         )
         return self._run(source, options)
 
     def generateXBRLJson(self, source: FilelikeAndFileName) -> ArelleProcessingResult:
         return self._generateXBRLJson(
             source,
-            plugins="saveLoadableOIM",
+            plugins=self._plugins(source, "saveLoadableOIM"),
             pluginOptions={"saveLoadableOIM": "report.json"},
         )
 
@@ -216,7 +245,9 @@ class ArelleReportProcessor:
         try:
             result = self._generateXBRLJson(
                 source,
-                plugins=f"saveLoadableOIM|{taxonomy_info.__file__}",
+                plugins=self._plugins(
+                    source, "saveLoadableOIM", taxonomy_info.__file__
+                ),
                 pluginOptions={
                     "saveLoadableOIM": "report.json",
                     "taxonomyDataFile": str(taxonomyDataFile),
@@ -234,7 +265,7 @@ class ArelleReportProcessor:
         self,
         source: FilelikeAndFileName,
         *,
-        plugins: str,
+        plugins: str | None,
         pluginOptions: dict,
         abortOnMajorError: bool | None = None,
     ) -> ArelleProcessingResult:
@@ -265,7 +296,7 @@ class ArelleReportProcessor:
     ) -> ArelleProcessingResult:
         viewerBytesIO = BytesIO()
         options = self._makeOptions(
-            plugins="ixbrl-viewer",
+            plugins=self._plugins(source, "ixbrl-viewer"),
             pluginOptions={
                 "saveViewerDest": viewerBytesIO,
                 "viewer_feature_review": False,

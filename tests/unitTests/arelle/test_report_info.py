@@ -12,11 +12,13 @@ from typing import Any
 
 import pytest
 
+from mireport.arelle.capabilities import ArelleCapability, MissingPluginError
 from mireport.arelle.report_info import (
     ArelleReportProcessor,
     _singleFileFromResponseZip,
 )
 from mireport.arelle.support import ArelleRelatedException
+from mireport.filesupport import FilelikeAndFileName
 
 
 def makeZip(entries: dict[str, bytes]) -> BytesIO:
@@ -45,6 +47,24 @@ class TestSingleFileFromResponseZip:
         stream = makeZip({"foo.json": b"{}", "viewer.html": b"<html/>"})
         with pytest.raises(ArelleRelatedException, match="viewer.html"):
             _singleFileFromResponseZip(stream, "test thing")
+
+
+def plainPackage() -> FilelikeAndFileName:
+    return FilelikeAndFileName(fileContent=makeZip({}).getvalue(), filename="r.xbri")
+
+
+def inlinePackage(*, sec: bool = False, documents: int = 1) -> FilelikeAndFileName:
+    ixt = (
+        "http://www.sec.gov/inlineXBRL/transformation/2015-08-31"
+        if sec
+        else "http://www.xbrl.org/inlineXBRL/transformation/2020-02-12"
+    )
+    doc = (
+        f'<html xmlns="http://www.w3.org/1999/xhtml" '
+        f'xmlns:ix="http://www.xbrl.org/2013/inlineXBRL" xmlns:ixt="{ixt}"/>'
+    ).encode()
+    stream = makeZip({f"r/reports/{n}.htm": doc for n in range(documents)})
+    return FilelikeAndFileName(fileContent=stream.getvalue(), filename="r.xbri")
 
 
 class TestMakeOptions:
@@ -103,7 +123,7 @@ class TestMakeOptions:
         monkeypatch.setattr(processor, "_run", fakeRun)
         for call in (processor.generateXBRLJson, processor.validateReportPackage):
             with pytest.raises(StopIteration):
-                call(object())  # type: ignore[arg-type]
+                call(plainPackage())
         jsonOptions, validateOptions = seen
         assert jsonOptions.formulaAction == "none"
         assert validateOptions.formulaAction is None
@@ -126,7 +146,7 @@ class TestMakeOptions:
         monkeypatch.setattr(processor, "_run", fakeRun)
         target = tmp_path / "taxonomy.json"
         with pytest.raises(StopIteration):
-            processor.generateXBRLJsonWithTaxonomy(object(), target)  # type: ignore[arg-type]
+            processor.generateXBRLJsonWithTaxonomy(plainPackage(), target)
         (options,) = seen
         assert options.plugins == f"saveLoadableOIM|{taxonomy_info.__file__}"
         assert options.saveLoadableOIM == "report.json"
@@ -137,3 +157,102 @@ class TestMakeOptions:
         assert options.abortOnMajorError is True
         # The diagnostics collector is closed even when the run raises.
         assert not DiagnosticCollector.exists(tokens[0])
+
+
+class TestCapabilitiesBecomePlugins:
+    def makeProcessor(self, **kwargs: Any) -> ArelleReportProcessor:
+        return ArelleReportProcessor(taxonomyPackages=[Path("a.zip")], **kwargs)
+
+    def optionsSeen(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        processor: ArelleReportProcessor,
+        call: str,
+        source: Any,
+    ) -> Any:
+        seen: list[Any] = []
+
+        def fakeRun(source: Any, options: Any, responseZipStream: Any = None) -> Any:
+            seen.append(options)
+            raise StopIteration
+
+        monkeypatch.setattr(processor, "_run", fakeRun)
+        with pytest.raises(StopIteration):
+            getattr(processor, call)(
+                source, *([Path("t.json")] if call.endswith("Taxonomy") else [])
+            )
+        (options,) = seen
+        return options
+
+    @pytest.mark.parametrize("call", ["generateXBRLJson", "validateReportPackage"])
+    def test_a_document_set_gets_the_document_set_plugin(
+        self, monkeypatch: pytest.MonkeyPatch, call: str
+    ) -> None:
+        options = self.optionsSeen(
+            monkeypatch, self.makeProcessor(), call, inlinePackage(documents=2)
+        )
+        assert "inlineXbrlDocumentSet" in (options.plugins or "").split("|")
+
+    def test_detected_capabilities_add_to_the_json_and_taxonomy_plugins(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from mireport.arelle import taxonomy_info
+
+        edgar = tmp_path / "EDGAR" / "transform"
+        edgar.mkdir(parents=True)
+        (edgar / "__init__.py").write_text("")
+        options = self.optionsSeen(
+            monkeypatch,
+            self.makeProcessor(pluginDirectory=tmp_path),
+            "generateXBRLJsonWithTaxonomy",
+            inlinePackage(sec=True),
+        )
+        assert options.plugins.split("|") == [
+            "saveLoadableOIM",
+            taxonomy_info.__file__,
+            str(edgar),
+        ]
+
+    def test_a_plain_report_gets_no_extra_plugins(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        options = self.optionsSeen(
+            monkeypatch, self.makeProcessor(), "validateReportPackage", inlinePackage()
+        )
+        assert not options.plugins
+
+    def test_explicit_capabilities_replace_detection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        processor = self.makeProcessor(capabilities=[])
+        options = self.optionsSeen(
+            monkeypatch, processor, "validateReportPackage", inlinePackage(documents=2)
+        )
+        assert not options.plugins
+
+    def test_the_plugin_directory_comes_from_the_environment(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        edgar = tmp_path / "EDGAR" / "transform"
+        edgar.mkdir(parents=True)
+        (edgar / "__init__.py").write_text("")
+        monkeypatch.setenv("MIREPORT_ARELLE_PLUGINS", str(tmp_path))
+        options = self.optionsSeen(
+            monkeypatch,
+            self.makeProcessor(),
+            "validateReportPackage",
+            inlinePackage(sec=True),
+        )
+        assert options.plugins == str(edgar)
+
+    def test_a_missing_plugin_fails_before_arelle_runs(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("MIREPORT_ARELLE_PLUGINS", raising=False)
+        processor = self.makeProcessor()
+        ran: list[bool] = []
+        monkeypatch.setattr(processor, "_run", lambda *a, **k: ran.append(True))
+        with pytest.raises(MissingPluginError, match="EDGAR"):
+            processor.validateReportPackage(inlinePackage(sec=True))
+        assert not ran
+        assert ArelleCapability.SEC_INLINE_TRANSFORMS
