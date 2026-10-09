@@ -13,6 +13,7 @@ Session API, or pass this file to ``arelleCmdLine --plugins``.
 
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -131,6 +132,20 @@ def runTaxonomyInfo(
     modelXbrl: ModelXbrl,
     *args: Any,
     **kwargs: Any,
+) -> None:
+    """Arelle prints a plug-in's traceback to stderr but gives its caller nothing in
+    the log, so a failure here is also logged, as an error, with its type and text."""
+    try:
+        _runTaxonomyInfo(cntlr, options, modelXbrl)
+    except Exception as exc:
+        cntlr.addToLog(
+            f"{PLUGIN_NAME} failed: {type(exc).__name__}: {exc}", level=logging.ERROR
+        )
+        raise
+
+
+def _runTaxonomyInfo(
+    cntlr: Cntlr, options: RuntimeOptions, modelXbrl: ModelXbrl
 ) -> None:
     start_ns = time.perf_counter_ns()
     cntlr.addToLog(f"{PLUGIN_INFO} starting.")

@@ -139,3 +139,23 @@ def test_valid_qname_all_test_ns(qname_maker: QNameMaker) -> None:
     assert qname_maker.isValidQName("test:ValidName")
     assert qname_maker.isValidQName("data:another_one")
     assert qname_maker.isValidQName("data:another_one.two")
+
+
+def test_valid_qname_with_a_combining_mark(qname_maker: QNameMaker) -> None:
+    # "a" + U+0300 (a combining grave accent): an XML name character, as in a real ESEF
+    # filing's concept "...AttivitàFinanziarie"
+    assert qname_maker.isValidQName("foo:AttivitàFinanziarie")
+
+
+def test_valid_qname_with_non_ascii_letters(qname_maker: QNameMaker) -> None:
+    assert qname_maker.isValidQName("foo:Ünternehmen")
+    assert qname_maker.isValidQName("foo:売上高")
+
+
+def test_a_combining_mark_cannot_start_a_name(qname_maker: QNameMaker) -> None:
+    assert not qname_maker.isValidQName("foo:̀Accent")
+
+
+def test_a_digit_still_cannot_start_a_name(qname_maker: QNameMaker) -> None:
+    assert not qname_maker.isValidQName("foo:1Thing")
+    assert not qname_maker.isValidQName("foo:٣Thing")  # an Arabic-Indic digit

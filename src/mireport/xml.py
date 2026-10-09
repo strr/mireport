@@ -11,7 +11,10 @@ if TYPE_CHECKING:
 
 from mireport.exceptions import BrokenNamespacePrefixException, BrokenQNameException
 
-NCNAME_RE = re.compile(r"([a-zA-Z_][\w.-]*)")
+# An XML NCName: a letter (any script) or "_", then letters, digits, "_", ".", "-" and the
+# combining marks and extenders XML allows in names (a letter and U+0300 is "a-grave" in a
+# decomposed filing). "\w" is the Unicode word characters; "[^\W\d]" is those but digits.
+NCNAME_RE = re.compile(r"([^\W\d][\w.\-\u00b7\u0300-\u036f\u203f\u2040]*)")
 
 # XML schema defines a QNAME as NCNAME:NCNAME or just an unprefixed NCNAME.
 # We've no need to support the bare NCNAME version so we don't as it makes
