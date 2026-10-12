@@ -22,6 +22,13 @@ from mireport.arelle.tuple_findings import (
 )
 
 
+class Fact(SimpleNamespace):
+    """A fact that can be in a set, as Arelle's can."""
+
+    def __hash__(self) -> int:
+        return id(self)
+
+
 def item(
     concept: str,
     value: str | None,
@@ -30,7 +37,7 @@ def item(
     unit: str | None = None,
     numeric: bool = False,
 ) -> Any:
-    return SimpleNamespace(
+    return Fact(
         qname=f"ex:{concept}",
         isTuple=False,
         isItem=True,
@@ -44,7 +51,7 @@ def item(
 
 
 def row(concept: str, *children: Any) -> Any:
-    return SimpleNamespace(
+    return Fact(
         qname=f"ex:{concept}",
         isTuple=True,
         isItem=False,
@@ -164,17 +171,23 @@ class TestTupleKinds:
                 "Group",
                 item("GroupName", "G1"),
                 row(
-                    "Member", item("MemberName", "m1"), item("Share", "1", numeric=True)
+                    "Member",
+                    item("MemberName", "m1"),
+                    item("Share", "1", unit="pure", numeric=True),
                 ),
                 row(
-                    "Member", item("MemberName", "m2"), item("Share", "2", numeric=True)
+                    "Member",
+                    item("MemberName", "m2"),
+                    item("Share", "2", unit="pure", numeric=True),
                 ),
             ),
             row(
                 "Group",
                 item("GroupName", "G2"),
                 row(
-                    "Member", item("MemberName", "m3"), item("Share", "3", numeric=True)
+                    "Member",
+                    item("MemberName", "m3"),
+                    item("Share", "3", unit="pure", numeric=True),
                 ),
             ),
         ]
@@ -187,6 +200,38 @@ class TestTupleKinds:
         assert (tuple_child.occurrences, tuple_child.instances) == (3, 2)
         assert tuple_child.maxPerInstance == 2
         assert member.identity == ("ex:MemberName",)
+
+    def test_a_unitless_number_that_differs_per_row_is_a_row_number(self) -> None:
+        facts = [
+            row(
+                "Line",
+                item("No", str(n), numeric=True),
+                item("Amount", "5", unit="TWD", numeric=True),
+            )
+            for n in (1, 2, 3)
+        ]
+        (kind,) = tuple_kinds(model(*facts))
+        assert child(kind, "No").role == "index"
+        assert child(kind, "Amount").role == "measure"
+        assert kind.identity == ("ex:No",)
+
+    def test_a_number_with_a_unit_is_never_a_row_number(self) -> None:
+        facts = [
+            row("Line", item("Amount", str(n), unit="TWD", numeric=True))
+            for n in (1, 2)
+        ]
+        (kind,) = tuple_kinds(model(*facts))
+        assert child(kind, "Amount").role == "measure"
+        assert kind.identityUnclear
+
+    def test_a_kind_says_how_many_of_it_one_parent_holds(self) -> None:
+        facts = [
+            row("Group", row("Member", item("M", "1")), row("Member", item("M", "2"))),
+            row("Group", row("Member", item("M", "3"))),
+        ]
+        group, member = tuple_kinds(model(*facts))
+        assert group.maxPerParent == 0
+        assert member.maxPerParent == 2
 
     def test_a_sample_is_short_and_a_few(self) -> None:
         facts = [investee(f"{n}" * 100, "1") for n in range(6)]
@@ -216,3 +261,46 @@ class TestDiagnostics:
         result.addDiagnostics([*tuple_diagnostics(model(investee("A", "1"))), other])
         assert [k.concept for k in result.tuple_kinds] == ["ex:Investee"]
         assert result.diagnostics == [other]
+
+
+class TestInlineTuples:
+    """In an inline report a tuple's children are not in ``modelTupleFacts``: they sit
+    inside the ``ix:tuple`` element, so Arelle keeps them only as ancestors' descendants
+    (and ``factsInInstance``, a set, holds every fact)."""
+
+    @staticmethod
+    def nested(fact: Any, *ancestors: Any, index: int) -> Any:
+        fact.objectIndex = index
+        fact.iterancestors = lambda: iter([SimpleNamespace(tag="td"), *ancestors])
+        return fact
+
+    def test_children_are_found_by_nesting_whatever_the_order_of_the_set(self) -> None:
+        outer = self.nested(row("Group"), index=1)
+        inner = self.nested(row("Member"), outer, index=3)
+        name = self.nested(item("GroupName", "G1"), outer, index=2)
+        m_name = self.nested(item("MemberName", "m1"), inner, outer, index=4)
+        share = self.nested(
+            item("Share", "5", unit="pure", numeric=True), inner, outer, index=5
+        )
+        stray = self.nested(item("Revenue", "9", numeric=True), index=6)
+        for fact in (outer, inner):
+            fact.modelTupleFacts = []  # as Arelle leaves an inline tuple's
+        report = SimpleNamespace(
+            facts=[], factsInInstance={stray, share, m_name, inner, name, outer}
+        )
+        group, member = tuple_kinds(report)
+        assert (group.concept, group.instances, group.parents) == ("ex:Group", 1, ())
+        assert [c.concept for c in group.children] == ["ex:GroupName", "ex:Member"]
+        assert (member.concept, member.parents) == ("ex:Member", ("ex:Group",))
+        assert [c.concept for c in member.children] == ["ex:MemberName", "ex:Share"]
+
+    def test_a_child_names_its_parent_by_tuple_ref(self) -> None:
+        parent = self.nested(row("Group"), index=1)
+        parent.get = lambda key: "t1" if key == "tupleID" else None
+        parent.modelTupleFacts = []
+        orphan = self.nested(item("GroupName", "G1"), index=2)
+        orphan.get = lambda key: "t1" if key == "tupleRef" else None
+        (kind,) = tuple_kinds(
+            SimpleNamespace(facts=[], factsInInstance={parent, orphan})
+        )
+        assert [c.concept for c in kind.children] == ["ex:GroupName"]

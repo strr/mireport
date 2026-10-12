@@ -8,6 +8,8 @@ child concepts and, from their values across the kind's instances, what each chi
   instance to the next within a context (the investee's name in a table of investees). The
   row identity a dimension could carry;
 - ``pinned``: the same value in every instance (the currency of the table);
+- ``index``: numeric with no unit and differing from row to row (the "No." column): a row
+  number, which identifies like an ``identity`` child;
 - ``measure``: numeric;
 - ``tuple``: a nested tuple;
 - ``attribute``: anything else (it varies, but does not by itself tell the rows apart).
@@ -65,6 +67,8 @@ class TupleKind:
     concept: str
     parents: tuple[str, ...]
     """The tuple kinds it is nested in, in the order first met."""
+    maxPerParent: int
+    """The most instances of it that one parent instance holds (0 at the top level)."""
     instances: int
     contextGroups: int
     children: tuple[TupleChild, ...]
@@ -82,13 +86,55 @@ class _Draft:
     qname: Any
     parents: dict[str, None]
     instances: list[Sequence[Any]]
+    maxPerParent: int = 0
 
 
 def _is_tuple(fact: Any) -> bool:
     return bool(fact.isTuple)
 
 
-def _collect(facts: Sequence[Any]) -> dict[str, _Draft]:
+def _all_facts(modelXbrl: ModelXbrl) -> list[Any]:
+    """Every fact of the report in document order: `factsInInstance`, a set, when the
+    model has it (a tuple's children are only there), else `facts`."""
+    found = getattr(modelXbrl, "factsInInstance", None)
+    facts = list(found) if found else list(modelXbrl.facts)
+    return sorted(facts, key=lambda f: getattr(f, "objectIndex", 0))
+
+
+def _children_of(facts: Sequence[Any]) -> dict[int, list[Any]]:
+    """Each tuple's children, by the tuple's id. An instance document lists them in
+    `modelTupleFacts`. An inline one does not: a child sits inside the ``ix:tuple``
+    element, or names it by ``tupleRef``."""
+    tuples = [f for f in facts if _is_tuple(f)]
+    by_element = {id(t): t for t in tuples}
+    by_ref = {
+        ident: t for t in tuples if (ident := _attribute(t, "tupleID")) is not None
+    }
+    children = {id(t): list(t.modelTupleFacts) for t in tuples}
+    listed = {id(c) for found in children.values() for c in found}
+    for fact in facts:
+        if id(fact) in listed:
+            continue
+        parent = by_ref.get(_attribute(fact, "tupleRef") or "")
+        if parent is None:
+            for ancestor in getattr(fact, "iterancestors", lambda: iter(()))():
+                if id(ancestor) in by_element:
+                    parent = by_element[id(ancestor)]
+                    break
+        if parent is not None and parent is not fact:
+            children[id(parent)].append(fact)
+    return children
+
+
+def _attribute(fact: Any, name: str) -> str | None:
+    getter = getattr(fact, "get", None)
+    return None if getter is None else getter(name)
+
+
+def _collect(modelXbrl: ModelXbrl) -> dict[str, _Draft]:
+    facts = _all_facts(modelXbrl)
+    children = _children_of(facts)
+    child_ids = {id(c) for found in children.values() for c in found}
     drafts: dict[str, _Draft] = {}
 
     def walk(fact: Any, parent: str | None) -> None:
@@ -96,14 +142,18 @@ def _collect(facts: Sequence[Any]) -> dict[str, _Draft]:
         draft = drafts.setdefault(name, _Draft(fact.qname, {}, []))
         if parent is not None:
             draft.parents.setdefault(parent, None)
-        children = list(fact.modelTupleFacts)
-        draft.instances.append(children)
-        for child in children:
+        found = children.get(id(fact)) or list(fact.modelTupleFacts)
+        draft.instances.append(found)
+        held: dict[str, int] = {}
+        for child in found:
             if _is_tuple(child):
+                held[str(child.qname)] = held.get(str(child.qname), 0) + 1
                 walk(child, name)
+        for kind, number in held.items():
+            drafts[kind].maxPerParent = max(drafts[kind].maxPerParent, number)
 
     for fact in facts:
-        if _is_tuple(fact):
+        if _is_tuple(fact) and id(fact) not in child_ids:
             walk(fact, None)
     return drafts
 
@@ -168,6 +218,10 @@ def _kind(name: str, draft: _Draft) -> TupleKind:
             role = "tuple"
         elif first.concept.isNumeric:
             role = "measure"
+            if once and not nil and not units and count > 1:
+                column = [[_value(found[0]) or ""] for found in per_instance]
+                if _unique_within_groups(column, groups):
+                    role = "index"
         elif not once or nil:
             role = "attribute"
         elif count > 1 and len(distinct) == 1:
@@ -176,7 +230,7 @@ def _kind(name: str, draft: _Draft) -> TupleKind:
             column = [[_value(found[0]) or ""] for found in per_instance]
             unique = count > 1 and _unique_within_groups(column, groups)
             role = "identity" if unique else "attribute"
-        if once and not nil and role in ("identity", "attribute"):
+        if once and not nil and role in ("identity", "attribute", "index"):
             single[concept] = [_value(found[0]) or "" for found in per_instance]
         roles[concept] = role
         children.append(
@@ -193,7 +247,7 @@ def _kind(name: str, draft: _Draft) -> TupleKind:
             )
         )
 
-    identity = tuple(c for c in order if roles[c] == "identity")
+    identity = tuple(c for c in order if roles[c] in ("identity", "index"))
     pairs: tuple[tuple[str, str], ...] = ()
     if not identity and count > 1:
         candidates = [c for c in order if roles[c] == "attribute" and c in single]
@@ -207,6 +261,7 @@ def _kind(name: str, draft: _Draft) -> TupleKind:
     return TupleKind(
         concept=name,
         parents=tuple(draft.parents),
+        maxPerParent=draft.maxPerParent,
         instances=count,
         contextGroups=len(set(groups)),
         children=tuple(children),
@@ -217,7 +272,7 @@ def _kind(name: str, draft: _Draft) -> TupleKind:
 
 
 def _kinds(modelXbrl: ModelXbrl) -> list[tuple[Any, TupleKind]]:
-    drafts = _collect(list(modelXbrl.facts))
+    drafts = _collect(modelXbrl)
     return [(draft.qname, _kind(name, draft)) for name, draft in drafts.items()]
 
 
