@@ -18,6 +18,7 @@ from arelle.ModelXbrl import ModelXbrl
 
 from mireport.arelle.diagnostics import ArelleDiagnostic
 from mireport.arelle.report_findings import InvalidFact, as_invalid_fact
+from mireport.arelle.tuple_findings import TupleKind, as_tuple_kind
 from mireport.conversionresults import Message, MessageType, Severity
 from mireport.exceptions import MIReportException
 from mireport.filesupport import FilelikeAndFileName
@@ -82,6 +83,7 @@ class ArelleProcessingResult:
         self._exceptions: list[Exception] = []
         self._diagnostics: list[ArelleDiagnostic] = []
         self._invalidFacts: list[InvalidFact] = []
+        self._tupleKinds: list[TupleKind] = []
 
     @classmethod
     def fromSession(cls, session: Session) -> Self:
@@ -202,6 +204,8 @@ class ArelleProcessingResult:
         for diagnostic in diagnostics:
             if (invalid := as_invalid_fact(diagnostic)) is not None:
                 self._invalidFacts.append(invalid)
+            elif (kind := as_tuple_kind(diagnostic)) is not None:
+                self._tupleKinds.append(kind)
             else:
                 self._diagnostics.append(diagnostic)
 
@@ -209,6 +213,12 @@ class ArelleProcessingResult:
     def invalid_facts(self) -> list[InvalidFact]:
         """The facts whose value failed their datatype (xBRL-JSON writes those as nil)."""
         return list(self._invalidFacts)
+
+    @property
+    def tuple_kinds(self) -> list[TupleKind]:
+        """The tuple kinds of the report, with what their children are (xBRL-JSON has
+        none of it)."""
+        return list(self._tupleKinds)
 
     @property
     def diagnostics(self) -> list[ArelleDiagnostic]:

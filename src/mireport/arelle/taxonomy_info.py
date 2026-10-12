@@ -37,6 +37,7 @@ from mireport.arelle.taxonomy_extraction import (
     UTRInfoExtractor,
     writeDataFile,
 )
+from mireport.arelle.tuple_findings import tuple_diagnostics
 from mireport.version import VersionInformationTuple
 
 if TYPE_CHECKING:
@@ -153,6 +154,8 @@ def _runTaxonomyInfo(
     extractor = TaxonomyInfoExtractor(cntlr, options, modelXbrl)
     pdata.Taxonomy.update(extractor.extract())
     for diagnostic in invalid_fact_diagnostics(modelXbrl):
+        extractor.diagnostics.emit(diagnostic)
+    for diagnostic in tuple_diagnostics(modelXbrl):
         extractor.diagnostics.emit(diagnostic)
     if options.utrValidate:
         cntlr.addToLog("UTR validation is on so attempting to process UTR entries")
