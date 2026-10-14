@@ -1312,6 +1312,86 @@ class TestExtractDimensionDefinitionsType:
         assert openDiagnostic.level == logging.INFO
 
 
+class TestExtractDomainRoots:
+    """A domain-member tree in an ELR with no dimensional arcrole (a country list, say)
+    is named in the bake: its root and its members, so a consumer can see a domain that
+    no dimension in the DTS uses."""
+
+    ELR = "https://example.com/elr"
+
+    def extract(
+        self,
+        baseSets: list[tuple[str, str]],
+        relSets: dict[Any, Any],
+    ) -> dict[str, Any]:
+        extractor, _ = makeExtractor({}, relSets, baseSets=baseSets)
+        extractor.extractDomainRoots()
+        return extractor.taxonomyJson
+
+    def tree(self) -> StubLinkroleRelSet:
+        root, a, b, c = (StubConcept(qn(n)) for n in ("Root", "A", "B", "C"))
+        return StubLinkroleRelSet(
+            self.ELR,
+            {
+                id(root): [conceptRel(a), conceptRel(b)],
+                id(a): [conceptRel(c)],
+            },
+            roots=[root],
+        )
+
+    def test_the_root_and_its_descendants_in_order(self) -> None:
+        section = self.extract(
+            [(XbrlConst.domainMember, self.ELR)], {self.ELR: self.tree()}
+        )["domainRoots"]
+        assert section == [
+            {
+                "elr": self.ELR,
+                "root": qn("Root"),
+                "members": [qn("A"), qn("C"), qn("B")],
+            }
+        ]
+
+    def test_an_elr_with_a_dimensional_arcrole_is_not_a_standalone_tree(self) -> None:
+        taxonomyJson = self.extract(
+            [
+                (XbrlConst.domainMember, self.ELR),
+                (XbrlConst.dimensionDomain, self.ELR),
+            ],
+            {self.ELR: self.tree()},
+        )
+        assert "domainRoots" not in taxonomyJson
+
+    def test_a_root_with_no_members_is_left_out(self) -> None:
+        lonely = StubLinkroleRelSet(self.ELR, {}, roots=[StubConcept(qn("Lonely"))])
+        taxonomyJson = self.extract(
+            [(XbrlConst.domainMember, self.ELR)], {self.ELR: lonely}
+        )
+        assert "domainRoots" not in taxonomyJson
+
+    def test_every_root_of_an_elr_is_named(self) -> None:
+        a, b, x, y = (StubConcept(qn(n)) for n in ("RootA", "RootB", "X", "Y"))
+        relSet = StubLinkroleRelSet(
+            self.ELR,
+            {id(a): [conceptRel(x)], id(b): [conceptRel(y)]},
+            roots=[a, b],
+        )
+        section = self.extract(
+            [(XbrlConst.domainMember, self.ELR)], {self.ELR: relSet}
+        )["domainRoots"]
+        assert [(s["root"], s["members"]) for s in section] == [
+            (qn("RootA"), [qn("X")]),
+            (qn("RootB"), [qn("Y")]),
+        ]
+
+    def test_no_domain_member_elr_no_section(self) -> None:
+        assert "domainRoots" not in self.extract([], {})
+
+    def test_extraction_runs_it(self) -> None:
+        import inspect
+
+        assert "self.extractDomainRoots()" in inspect.getsource(TaxonomyInfoExtractor)
+
+
 class TestReportDomainMemberOnlyLinkroleRoots:
     ELR = "https://example.com/elr"
 

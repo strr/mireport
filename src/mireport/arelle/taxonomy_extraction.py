@@ -240,6 +240,7 @@ class TaxonomyInfoExtractor:
 
         self.extractTuples()
         self.extractFormula()
+        self.extractDomainRoots()
         self.extractPresentation()
         self.extractCalculation()
         self.extractAnchoring()
@@ -1281,6 +1282,24 @@ class TaxonomyInfoExtractor:
         a domain-member tree by itself (e.g. an enumeration domain, or a
         general-purpose taxonomy hierarchy), where a second root is otherwise
         never noticed."""
+        for linkrole, relSet in self.domainMemberOnlyLinkroles():
+            roots = relSet.rootConcepts()
+            if len(roots) > 1:
+                self.diagnostics.emit(
+                    ArelleDiagnostic.warning(
+                        f"Domain-member-only extended link role has multiple ({len(roots)}) roots",
+                        elr=linkrole,
+                        # document order, deliberately not sorted
+                        concepts=(qnameOf(root) for root in roots),
+                    ),
+                )
+
+    def domainMemberOnlyLinkroles(
+        self,
+    ) -> Iterator[tuple[str, ConceptRelationshipSet]]:
+        """Each extended link role holding domain-member relationships but none of the
+        dimensional arcroles (all/notAll/hypercube-dimension/dimension-domain), with
+        its domain-member relationship set, in the DTS's order."""
         dimensionalArcroles = frozenset(
             {
                 XbrlConst.all,
@@ -1296,17 +1315,33 @@ class TaxonomyInfoExtractor:
         for linkrole, arcroles in arcrolesByLinkrole.items():
             if XbrlConst.domainMember not in arcroles or arcroles & dimensionalArcroles:
                 continue
-            relSet = self.model.conceptRelationshipSet(XbrlConst.domainMember, linkrole)
-            roots = relSet.rootConcepts()
-            if len(roots) > 1:
-                self.diagnostics.emit(
-                    ArelleDiagnostic.warning(
-                        f"Domain-member-only extended link role has multiple ({len(roots)}) roots",
-                        elr=linkrole,
-                        # document order, deliberately not sorted
-                        concepts=(qnameOf(root) for root in roots),
-                    ),
+            yield (
+                linkrole,
+                self.model.conceptRelationshipSet(XbrlConst.domainMember, linkrole),
+            )
+
+    def extractDomainRoots(self) -> None:
+        """Write the top-level "domainRoots" section: for each root of a domain-member
+        tree that no dimension uses (see domainMemberOnlyLinkroles()) that has members,
+        its ELR, the root and its descendants depth-first. Only when there are any.
+        A tree under a dimension is a dimension's domain and is written with it."""
+        found: list[dict[str, Any]] = []
+        for linkrole, relSet in self.domainMemberOnlyLinkroles():
+            for root in relSet.rootConcepts():
+                if not relSet.hasRelationshipsFrom(root):
+                    continue
+                found.append(
+                    {
+                        "elr": linkrole,
+                        "root": qnameOf(root),
+                        "members": [
+                            row.qname
+                            for row in self.walkDefinitionChildren(root, relSet, 1)
+                        ],
+                    }
                 )
+        if found:
+            self.taxonomyJson["domainRoots"] = found
 
     def getLabelsForRoleType(self, roleType: ModelRoleType) -> dict[str, str]:
         labels: dict[str, str] = {}

@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from enum import Enum, StrEnum, auto
 from functools import cache, cached_property
 from pathlib import Path
+from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, overload
 
 from mireport.data import registries, taxonomies
@@ -1322,6 +1323,7 @@ class Taxonomy:
         referenceRoles: Mapping[str, Mapping[str, Any]] | None = None,
         roles: Mapping[str, Mapping[str, Any]] | None = None,
         tuples: Iterable[str] | None = None,
+        domainRoots: Iterable[Mapping[str, Any]] | None = None,
     ) -> None:
         # presentation, dimensions and calculation are only ever read, never
         # modified, so the same parsed JSON can back any number of Taxonomy
@@ -1385,6 +1387,17 @@ class Taxonomy:
 
         self._tupleConcepts: frozenset[QName] = frozenset(
             qnameMaker.fromString(tupleQName) for tupleQName in (tuples or ())
+        )
+
+        domainRootMembers: dict[Concept, list[Concept]] = {}
+        for tree in domainRoots or ():
+            members = domainRootMembers.setdefault(concepts[tree["root"]], [])
+            for name in tree["members"]:
+                member = concepts[name]
+                if member not in members:
+                    members.append(member)
+        self._domainRoots: Mapping[Concept, tuple[Concept, ...]] = MappingProxyType(
+            {root: tuple(members) for root, members in domainRootMembers.items()}
         )
 
         self._lookupConceptsByName: dict[str, list[Concept]] = defaultdict(list)
@@ -1666,6 +1679,9 @@ class Taxonomy:
             # Absent when the DTS has no tuples and in JSON baked before they
             # were named.
             tuples=bits.get("tuples"),
+            # Absent when no domain-member tree stands outside a dimension and
+            # in JSON baked before they were named.
+            domainRoots=bits.get("domainRoots"),
         )
 
     def _calculationArcroleFromJSON(
@@ -1961,6 +1977,14 @@ class Taxonomy:
         """The tuple concepts of the DTS, which are not concepts of this
         taxonomy (tuples are not modelled). Empty if the DTS has none."""
         return self._tupleConcepts
+
+    @property
+    def domainRoots(self) -> Mapping[Concept, tuple[Concept, ...]]:
+        """The root of each domain-member tree that no dimension of the DTS uses
+        (a country list, say), with its descendants depth-first, a root in several
+        extended link roles having each one's, without repeats. Empty if there are
+        none or the JSON predates them being named."""
+        return self._domainRoots
 
     @property
     def calculationArcrole(self) -> CalculationArcrole | None:
