@@ -14,7 +14,7 @@ from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import pytest
 from arelle import XbrlConst
@@ -112,8 +112,10 @@ class StubValidatedModel:
         items: list[tuple[QName, Any]] | None = None,
         typeQNamesByQName: dict[QName, tuple[QName, QName]] | None = None,
         tuples: list[QName] | None = None,
+        formula: dict[str, Any] | None = None,
     ) -> None:
         self._tuples = tuples or []
+        self._formula = formula or {}
         self._relsByArcrole = relsByArcrole
         self._conceptRelSets = conceptRelSets or {}
         self._linkrolesByArcrole = linkrolesByArcrole or {}
@@ -174,6 +176,9 @@ class StubValidatedModel:
     def tupleConcepts(self) -> Iterator[QName]:
         yield from self._tuples
 
+    def formulaContent(self) -> dict[str, Any]:
+        return self._formula
+
     def roleType(self, roleURI: str, emit: Any) -> StubRoleType:
         return self._roleTypes.get(roleURI) or StubRoleType(roleURI)
 
@@ -223,6 +228,7 @@ def makeExtractor(
     typeQNamesByQName: dict[QName, tuple[QName, QName]] | None = None,
     options: dict[str, Any] | None = None,
     tuples: list[QName] | None = None,
+    formula: dict[str, Any] | None = None,
 ) -> tuple[TaxonomyInfoExtractor, str]:
     """Build an extractor over stubs, with a diagnostics collector attached.
     `options` adds attributes to the stub RuntimeOptions."""
@@ -244,6 +250,7 @@ def makeExtractor(
             items,
             typeQNamesByQName,
             tuples,
+            formula,
         ),
     )
     return extractor, token
@@ -2629,3 +2636,33 @@ class TestTuples:
         extractor.extractTuples()
         assert "tuples" not in extractor.taxonomyJson
         assert collectedDiagnostics(token) == []
+
+
+class TestFormula:
+    """XBRL Formula content (assertions, formulas) is not modelled; the bake says what
+    the DTS loads so a consumer can report what it cannot carry. The key is written
+    only when there is some."""
+
+    CONTENT: ClassVar[dict[str, Any]] = {
+        "valueAssertion": 3,
+        "existenceAssertion": 1,
+        "linkbases": ["https://example.com/for_a.xml", "https://example.com/for_b.xml"],
+    }
+
+    def test_the_content_is_written_to_the_baked_json(self) -> None:
+        extractor, _ = makeExtractor({}, formula=self.CONTENT)
+        extractor.extractFormula()
+        assert extractor.taxonomyJson["formula"] == self.CONTENT
+
+    def test_no_formula_no_section(self) -> None:
+        extractor, token = makeExtractor({})
+        extractor.extractFormula()
+        assert "formula" not in extractor.taxonomyJson
+        assert collectedDiagnostics(token) == []
+
+    def test_extraction_runs_it(self) -> None:
+        # extractTuples() and extractFormula() are called together by the extraction.
+        import inspect
+
+        source = inspect.getsource(TaxonomyInfoExtractor)
+        assert "self.extractFormula()" in source

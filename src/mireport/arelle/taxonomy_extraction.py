@@ -239,6 +239,7 @@ class TaxonomyInfoExtractor:
         self.taxonomyJson["entryPoint"] = self.options.entrypointFile
 
         self.extractTuples()
+        self.extractFormula()
         self.extractPresentation()
         self.extractCalculation()
         self.extractAnchoring()
@@ -1341,6 +1342,14 @@ class TaxonomyInfoExtractor:
                 concepts=tuples,
             ),
         )
+
+    def extractFormula(self) -> None:
+        """Write the top-level "formula" section: how many formulas and assertions
+        the DTS loads, and where, only when there are any. Formula is not modelled
+        here; the section lets a consumer say what it cannot carry."""
+        content = self.model.formulaContent()
+        if content:
+            self.taxonomyJson["formula"] = content
 
     def extractPresentation(self) -> None:
         tuples = frozenset(self.model.tupleConcepts())

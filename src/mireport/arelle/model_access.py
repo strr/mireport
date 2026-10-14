@@ -31,6 +31,12 @@ from arelle.ModelDtsObject import (
     ModelResource,
     ModelRoleType,
 )
+from arelle.ModelFormulaObject import (
+    ModelConsistencyAssertion,
+    ModelExistenceAssertion,
+    ModelFormula,
+    ModelValueAssertion,
+)
 from arelle.ModelValue import QName
 from arelle.ModelXbrl import ModelXbrl
 
@@ -318,6 +324,32 @@ class ValidatedModel:
             qname = qnameOf(concept)
             if qname.namespaceURI != XbrlConst.xbrli:
                 yield qname
+
+    def formulaContent(self) -> dict[str, Any]:
+        """What XBRL Formula content the DTS loads: the number of each of formula,
+        value, existence and consistency assertions that is present, and the
+        documents they are in ("linkbases", sorted). Empty if there is none.
+
+        Formula is not executed (the DTS is loaded with formulaAction "none"), but
+        its linkbases are parsed into model objects all the same."""
+        kinds: tuple[tuple[str, type], ...] = (
+            ("formula", ModelFormula),
+            ("valueAssertion", ModelValueAssertion),
+            ("existenceAssertion", ModelExistenceAssertion),
+            ("consistencyAssertion", ModelConsistencyAssertion),
+        )
+        counts: dict[str, int] = {}
+        linkbases: set[str] = set()
+        for obj in self._modelXbrl.modelObjects:
+            for key, cls in kinds:
+                if isinstance(obj, cls):
+                    counts[key] = counts.get(key, 0) + 1
+                    if obj.modelDocument is not None:
+                        linkbases.add(obj.modelDocument.uri)
+                    break
+        if not counts:
+            return {}
+        return {**counts, "linkbases": sorted(linkbases)}
 
     def concept(self, qname: QName) -> ModelConcept:
         try:
