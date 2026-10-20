@@ -13,13 +13,17 @@ from babel import Locale
 from babel.messages.catalog import Catalog
 from babel.messages.extract import extract
 from babel.messages.mofile import write_mo
-from babel.messages.pofile import read_po
+from babel.messages.pofile import read_po, write_po
 from babel.support import Translations
 from jinja2.ext import babel_extract
 
 import mireport
 from mireport.conversionresults import ConversionResultsBuilder
-from mireport.data.disclosures import VSME_DEFAULTS, getReportTranslations
+from mireport.data.disclosures import (
+    VSME_DEFAULTS,
+    _compiledCatalog,
+    getReportTranslations,
+)
 from mireport.entrypoints import entryPointSetOf
 from mireport.report import InlineReport
 from mireport.report.factbuilder import FactBuilder
@@ -68,9 +72,26 @@ def test_a_language_has_its_catalog() -> None:
     assert translations.gettext("Report generated") == "Bericht erstellt"
 
 
-def test_a_fuzzy_entry_is_not_used() -> None:
-    translations = getReportTranslations(VSME_ENTRY_POINTS, Locale.parse("de"))
-    assert translations.gettext(ONE_COUNT) == ONE_COUNT
+def test_a_fuzzy_entry_is_not_used(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    catalog = Catalog(locale="de")
+    catalog.add("Report generated", "Bericht erstellt")
+    catalog.add(
+        ONE_COUNT, "Dieser Bericht enthält %(factCount)s XBRL-Fakten.", flags={"fuzzy"}
+    )
+    po = tmp_path / "translations" / "vsme" / "de.po"
+    po.parent.mkdir(parents=True)
+    with po.open("wb") as f:
+        write_po(f, catalog)
+    monkeypatch.setattr("mireport.data.disclosures.files", lambda _: tmp_path)
+    _compiledCatalog.cache_clear()
+    try:
+        translations = getReportTranslations(VSME_ENTRY_POINTS, Locale.parse("de"))
+        assert translations.gettext("Report generated") == "Bericht erstellt"
+        assert translations.gettext(ONE_COUNT) == ONE_COUNT
+    finally:
+        _compiledCatalog.cache_clear()
 
 
 def test_a_territory_falls_back_to_its_language() -> None:
@@ -133,7 +154,7 @@ def test_a_german_xbrl_json_report_is_translated() -> None:
     assert report.language == "de"
     assert "<dt>Bericht erstellt</dt>" in page
     assert "<h2>Inhaltsverzeichnis</h2>" in page
-    assert report.untranslatedStrings == ["Document Information", ONE_COUNT]
+    assert report.untranslatedStrings == ["Document Information"]
 
 
 def test_translations_are_escaped(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -174,14 +195,14 @@ class TestExcelReport:
             "<p>Alle Angaben beziehen sich auf den oben genannten Berichtszeitraum"
             in page
         )
-        # The one-count form is fuzzy in the German catalog, so it stays English.
-        assert "<p>This report contains 144 XBRL facts.</p>" in page
-        assert report.untranslatedStrings == ["Document Information", ONE_COUNT]
+        assert "<p>Dieser Bericht enthält 144 XBRL-Fakten.</p>" in page
+        assert report.untranslatedStrings == ["Document Information"]
 
     def test_german_with_more_facts_shown_than_distinct(self) -> None:
         page = html(excelReport("de", duplicates=3))
         assert (
-            "<p>Dieser Bericht enthält 147 XBRL facts (144 unique facts).</p>" in page
+            "<p>Dieser Bericht enthält 147 XBRL-Fakten (144 eindeutige Fakten).</p>"
+            in page
         )
 
     def test_english(self) -> None:

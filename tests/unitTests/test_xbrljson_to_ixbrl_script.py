@@ -106,8 +106,6 @@ def test_a_german_report_is_translated_and_says_what_was_not(
     results = script.doConversion(args)
     (html,) = output.glob("*.html")
     assert "<dt>Bericht erstellt</dt>" in html.read_text(encoding="utf-8")
-    assert (
-        "Report strings with no de translation: Document Information; "
-        "This report contains %(factCount)s XBRL facts."
-        in [str(m.messageText) for m in results.developerMessages]
-    )
+    assert "Report strings with no de translation: Document Information" in [
+        str(m.messageText) for m in results.developerMessages
+    ]
