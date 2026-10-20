@@ -18,12 +18,14 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from babel import Locale
 from lxml import etree
 from markupsafe import Markup
 
 from mireport.conversionresults import ConversionResultsBuilder, MessageType, Severity
 from mireport.entrypoints import describeEntryPointSet, entryPointSetOf
 from mireport.exceptions import InlineReportException, TaxonomyException, UnitException
+from mireport.localise import get_locale_from_str, split_base_territory
 from mireport.report import InlineReport
 from mireport.report.fact import Fact
 from mireport.report.factbuilder import FactBuilder, enumerationText
@@ -173,11 +175,28 @@ class XbrlJsonProcessor:
                 f"Bake it with scripts/update-taxonomy.py and load it with loadTaxonomyJSON(). "
                 f"Available: {[describeEntryPointSet(eps) for eps in listTaxonomies()]}"
             )
-        report = InlineReport(getTaxonomy(entryPointSet))
+        taxonomy = getTaxonomy(entryPointSet)
+        report = InlineReport(taxonomy, outputLocale=self._outputLocale(taxonomy))
         report.requireAllFactsRendered = self._strict
         for document in sorted(entryPointSet):
             report.addSchemaRef(document)
         return report
+
+    def _outputLocale(self, taxonomy: Taxonomy) -> Locale | None:
+        """The base language most of the facts declare: on a tie the taxonomy's default if it is
+        among them, else the first alphabetically. None (the taxonomy's default) when no fact
+        declares one."""
+        counts = Counter(
+            split_base_territory(fact.language)[0].lower()
+            for fact in self._document.facts
+            if fact.language
+        )
+        if not counts:
+            return None
+        most = max(counts.values())
+        tied = sorted(language for language, n in counts.items() if n == most)
+        default = split_base_territory(taxonomy.defaultLanguage or "")[0].lower()
+        return get_locale_from_str(default if default in tied else tied[0])
 
     def _reportIgnoredProperties(self) -> None:
         """Say what in the document is not acted on, rather than ignore it silently."""
