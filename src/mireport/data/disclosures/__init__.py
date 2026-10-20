@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 import logging
+from functools import cache
+from gettext import NullTranslations
+from importlib.resources import files
+from io import BytesIO
+
+from babel import Locale
+from babel.messages.mofile import write_mo
+from babel.messages.pofile import read_po
+from babel.support import Translations
 
 from mireport.entrypoints import EntryPointSet, entryPointSetOf
 from mireport.json import getJsonFiles, getObject
+from mireport.localise import as_xmllang, split_base_territory
 
 L = logging.getLogger(__name__)
 
@@ -76,6 +86,36 @@ def getLayoutStrategyName(entryPointSet: EntryPointSet) -> str | None:
     return _LAYOUT_OVERRIDES.get(
         entryPointSet, config.get("layoutStrategy", {}).get("default")
     )
+
+
+def getReportTranslations(
+    entryPointSet: EntryPointSet, locale: Locale
+) -> NullTranslations:
+    """The catalog of the report's fixed strings that this entry-point set's config names,
+    for the locale's full tag or else its base language. NullTranslations (the English
+    msgids) when there is neither."""
+    if (config := _CONFIG_BY_ENTRY_POINT.get(entryPointSet)) and (
+        directory := config.get("reportTranslations")
+    ):
+        tag = as_xmllang(locale)
+        for language in dict.fromkeys((tag, split_base_territory(tag)[0])):
+            if (compiled := _compiledCatalog(directory, language)) is not None:
+                return Translations(BytesIO(compiled))
+    return NullTranslations()
+
+
+@cache
+def _compiledCatalog(directory: str, language: str) -> bytes | None:
+    """``<directory>/<language>.po`` compiled to .mo bytes (fuzzy entries left out), or None
+    when there is no such catalog."""
+    po = files(__name__).joinpath(*directory.split("/"), f"{language}.po")
+    if not po.is_file():
+        return None
+    with po.open("rb") as f:
+        catalog = read_po(f)
+    mo = BytesIO()
+    write_mo(mo, catalog)
+    return mo.getvalue()
 
 
 # Back-compat: existing callers (e.g. processor.py) import this by name

@@ -167,6 +167,10 @@ def doConversion(args: argparse.Namespace) -> ConversionResults:
 
         pc.mark("Generating Inline Report")
         reportFile = report.getInlineReport()
+        if missing := report.untranslatedStrings:
+            pc.addDevInfoMessage(
+                f"Report strings with no {report.language} translation: {'; '.join(missing)}"
+            )
         reportPackage = report.getInlineReportPackage()
 
         output = args.output_path
