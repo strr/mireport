@@ -9,7 +9,9 @@ review their git diff after a run, and rerun when EFRAG ships new translations.
 
 import argparse
 import re
+import sys
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
 from babel.messages.catalog import Catalog
@@ -51,6 +53,35 @@ KNOWN_BAD = [
     ),
 ]
 
+# (language, label): our reviewed fix for a template's translation, used in its place. Drop
+# one once the template has it; the summary says so.
+CORRECTIONS = {
+    ("da", "template_label_introduction"): "Indledning",
+    (
+        "de",
+        "template_label_XBRL_facts_in_report",
+    ): "Dieser Bericht enthält %(factCount)s XBRL-Fakten (%(uniqueFactCount)s eindeutige Fakten).",
+    ("fr", "template_label_introduction"): "Introduction",
+    ("it", "template_label_reporting_period"): "Periodo di riferimento:",
+    (
+        "nl",
+        "template_label_entity_identifier_document_information",
+    ): "Identificatiecode entiteit",
+    ("nl", "template_label_report_currency_document_information"): "Rapportagevaluta",
+    ("pl", "template_label_reporting_period"): "Okres sprawozdawczy:",
+    (
+        "sl",
+        "template_label_entity_identifier_document_information",
+    ): "Identifikacijska številka podjetja",
+}
+
+HEADERS = {
+    "project": "VSME Digital Template",
+    "msgid_bugs_address": "https://github.com/EFRAG-EU/Digital-Template-to-XBRL-Converter/issues",
+    "last_translator": "EFRAG Digital Template, Translations sheet",
+    "language_team": "EFRAG Digital Template, Translations sheet",
+}
+
 PLACEHOLDERS = {
     re.compile(r"\{\{\s*ns\.fact_count\s*\}\}"): "%(factCount)s",
     re.compile(r"\{\{\s*facts\s*\|\s*count\s*\}\}"): "%(uniqueFactCount)s",
@@ -72,7 +103,9 @@ class Entry:
 class Collected:
     entries: dict[str, list[Entry]] = field(default_factory=dict)
     dropped: list[str] = field(default_factory=list)
+    corrected: list[str] = field(default_factory=list)
     review: list[str] = field(default_factory=list)
+    templateVersion: str | None = None
 
 
 def languageColumns(workbook: Workbook) -> dict[str, int]:
@@ -96,6 +129,17 @@ def labelRows(workbook: Workbook) -> dict[str, int]:
         for sheet, cells in name.destinations:
             rows[label] = workbook[sheet][cells.replace("$", "")].row
     return rows
+
+
+def templateVersion(workbook: Workbook) -> str | None:
+    """The template's own version, recorded in each catalog's header."""
+    if (
+        name := workbook.defined_names.get("template_reporting_template_version")
+    ) is None:
+        return None
+    for sheet, cells in name.destinations:
+        return cleaned(workbook[sheet][cells.replace("$", "")].value) or None
+    return None
 
 
 def cleaned(text: object) -> str:
@@ -140,7 +184,7 @@ def collect(workbook: Workbook) -> Collected:
     columns = languageColumns(workbook)
     rows = labelRows(workbook)
     ws = workbook["Translations"]
-    collected = Collected()
+    collected = Collected(templateVersion=templateVersion(workbook))
     for label in sorted(LABEL_MSGIDS.keys() - rows.keys()):
         collected.dropped.append(f"{label}: not in the template")
     for language, column in columns.items():
@@ -150,6 +194,17 @@ def collect(workbook: Workbook) -> Collected:
         for label, row in rows.items():
             english = cleaned(ws.cell(row, columns[ENGLISH]).value)
             text = cleaned(ws.cell(row, column).value)
+            if (correction := CORRECTIONS.get((language, label))) is not None:
+                if correction == text and not problem(language, label, text, english):
+                    collected.review.append(
+                        f"{language} {label}: the template now has the correction"
+                    )
+                elif correction != text:
+                    collected.corrected.append(
+                        f"{language} {label}: {text!r} -> {correction!r}"
+                    )
+                entries.extend(entriesFor(label, correction))
+                continue
             if why := problem(language, label, text, english):
                 collected.dropped.append(f"{language} {label}: {why} ({text!r})")
                 continue
@@ -159,10 +214,14 @@ def collect(workbook: Workbook) -> Collected:
     return collected
 
 
-def mergeInto(path: Path, language: str, entries: list[Entry]) -> Catalog:
+def mergeInto(
+    path: Path, language: str, entries: list[Entry], version: str | None = None
+) -> Catalog:
     """The catalog at ``path`` (or a new one) with these entries set. Entries it has that
     are not among them are kept; one whose translation is unchanged keeps its flags, so a
-    reviewed fuzzy entry stays reviewed."""
+    reviewed fuzzy entry stays reviewed. The revision date moves only when something
+    changes."""
+    changed = not path.exists()
     if path.exists():
         with path.open("rb") as f:
             catalog = read_po(f, locale=language)
@@ -170,18 +229,25 @@ def mergeInto(path: Path, language: str, entries: list[Entry]) -> Catalog:
         catalog = Catalog(
             locale=language,
             header_comment="# Collected by scripts/collect-report-translations.py.",
-            project="EFRAG Digital Template to XBRL Converter",
             fuzzy=False,
         )
+    for name, value in {**HEADERS, "version": version or catalog.version}.items():
+        if getattr(catalog, name) != value:
+            setattr(catalog, name, value)
+            changed = True
     for entry in entries:
         flags = {"fuzzy"} if entry.fuzzy else set()
         if (existing := catalog.get(entry.msgid)) is None:
             catalog.add(entry.msgid, entry.string, flags=flags)
             existing = catalog[entry.msgid]
+            changed = True
         elif existing.string != entry.string:
             existing.string = entry.string
             existing.flags = flags
+            changed = True
         existing.auto_comments = [entry.label]
+    if changed:
+        catalog.revision_date = datetime.now(UTC)
     return catalog
 
 
@@ -189,7 +255,7 @@ def writeCatalogs(collected: Collected, directory: Path) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     for language, entries in collected.entries.items():
         path = directory / f"{language}.po"
-        catalog = mergeInto(path, language, entries)
+        catalog = mergeInto(path, language, entries, collected.templateVersion)
         with path.open("wb") as f:
             write_po(f, catalog, width=0)
 
@@ -203,6 +269,7 @@ def summary(collected: Collected) -> list[str]:
             f"{language}: {len(entries) - fuzzy} kept, {fuzzy} fuzzy, {dropped} dropped"
         )
     lines += [f"Dropped {d}" for d in collected.dropped]
+    lines += [f"Corrected {c}" for c in collected.corrected]
     lines += [f"For review {r}" for r in collected.review]
     return lines
 
@@ -223,6 +290,7 @@ def createArgParser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")  # the summary quotes every language
     args = createArgParser().parse_args()
     collected = collect(load_workbook(args.template, data_only=True))
     writeCatalogs(collected, args.output_dir)

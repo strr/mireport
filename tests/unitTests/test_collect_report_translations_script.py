@@ -58,6 +58,12 @@ def script() -> ModuleType:
     return module
 
 
+@pytest.fixture(autouse=True)
+def noCorrections(script: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real corrections are for the real template; each test sets its own."""
+    monkeypatch.setattr(script, "CORRECTIONS", {})
+
+
 @pytest.fixture(scope="module")
 def workbook() -> Workbook:
     wb = Workbook()
@@ -131,6 +137,48 @@ def test_bad_entries_are_dropped_and_reported(
     assert collected.review == [
         "nl template_label_report_generated: long ('Datum waarop rapport is gegenereerd')"
     ]
+
+
+def test_corrections_replace_the_template_and_are_reported(
+    script: ModuleType,
+    workbook: Workbook,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scheme = "template_label_entity_identifier_scheme_document_information"
+    monkeypatch.setattr(
+        script,
+        "CORRECTIONS",
+        {
+            ("nl", scheme): "Identificatieschema entiteit",
+            ("ga", "template_label_report_generated"): "Tuairisc ginte",
+        },
+    )
+    collected = script.collect(workbook)
+    script.writeCatalogs(collected, tmp_path)
+    assert catalog(tmp_path, "nl")["Entity Identifier Scheme"].string == (
+        "Identificatieschema entiteit"
+    )
+    assert collected.corrected == [
+        f"nl {scheme}: 'Mij niet duidelijk waar deze wordt gebruikt' -> 'Identificatieschema entiteit'"
+    ]
+    assert (
+        "ga template_label_report_generated: the template now has the correction"
+        in (collected.review)
+    )
+
+
+def test_headers_are_filled_and_dated_only_on_change(
+    script: ModuleType, workbook: Workbook, tmp_path: Path
+) -> None:
+    collected = script.collect(workbook)
+    script.writeCatalogs(collected, tmp_path)
+    de = catalog(tmp_path, "de")
+    assert de.last_translator == "EFRAG Digital Template, Translations sheet"
+    assert de.msgid_bugs_address.endswith("/issues")
+    before = (tmp_path / "de.po").read_bytes()
+    script.writeCatalogs(collected, tmp_path)
+    assert (tmp_path / "de.po").read_bytes() == before
 
 
 def test_a_rerun_keeps_hand_added_and_reviewed_entries(
