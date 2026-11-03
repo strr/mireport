@@ -496,9 +496,11 @@ class XbrlJsonProcessor:
     def _setDimension(self, fb: FactBuilder, name: str, member: str | None) -> None:
         dimension = self._concept(name)
         if dimension.isTypedDimension:
-            if member is None:
+            wrapper = dimension.typedElement
+            if member is None and not (wrapper is not None and wrapper.isNillable):
                 raise FactProblem(
-                    UNSUPPORTED, f"A nil value for {name} is not supported."
+                    INVALID_DIMENSION_VALUE,
+                    f"{name} has a nil value, but its typed element is not nillable.",
                 )
             fb.setTypedDimension(dimension, member)
         elif dimension.isExplicitDimension:

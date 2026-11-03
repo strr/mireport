@@ -63,6 +63,7 @@ def _fact(
     f.period = period or _NO_PERIOD
     f.explicit_dimensions = dict(explicit or {})
     f.typed_dimensions = dict(typed or {})
+    f.shown_typed_dimensions = {d: v for d, v in (typed or {}).items() if v is not None}
     f.context_key = context
     f.value = value
     f.hasTaxonomyDimensions.return_value = bool(explicit or typed)
@@ -708,6 +709,14 @@ class TestTypedDimension:
         grid = _builder({x: [_fact(), facts[x][0]], y: []}).typed_dimension(
             reportable, dimension
         )
+        assert grid.row_labels == ["2"]
+
+    def test_a_nil_member_is_laid_out_as_no_member(self):
+        dimension, reportable, facts = self._setup()
+        x, y = reportable
+        grid = _builder(
+            {x: [_fact(typed={dimension: None}), facts[x][0]], y: []}
+        ).typed_dimension(reportable, dimension)
         assert grid.row_labels == ["2"]
 
 

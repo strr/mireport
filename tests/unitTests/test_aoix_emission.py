@@ -160,6 +160,19 @@ class TestDimensions:
         fact = _fact(typed_values=(TypedDimensionValue.of(dimension, "R&D <1>"),))
         assert 'xbrli:Axis="R&D <1>"' in fact_aspects(fact)
 
+    def test_a_nil_typed_member_is_aoix_bare_nil(self) -> None:
+        dimension = _dimension("xbrli:Axis", "xbrli:Wrapper")
+        fact = _fact(typed_values=(TypedDimensionValue.of(dimension, None),))
+        assert fact_aspects(fact)[-2:] == [
+            "typed-value-wrapper=xbrli:Wrapper",
+            "xbrli:Axis=nil",
+        ]
+
+    def test_the_text_nil_stays_quoted(self) -> None:
+        dimension = _dimension("xbrli:Axis", "xbrli:Wrapper")
+        fact = _fact(typed_values=(TypedDimensionValue.of(dimension, "nil"),))
+        assert 'xbrli:Axis="nil"' in fact_aspects(fact)
+
     def test_each_typed_dimension_gets_its_own_wrapper_before_it(self) -> None:
         a = _dimension("xbrli:AxisA", "xbrli:WrapA")
         b = _dimension("xbrli:AxisB", "xbrli:WrapB")

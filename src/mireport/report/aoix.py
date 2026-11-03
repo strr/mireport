@@ -51,9 +51,11 @@ def aoix_quote(text: str) -> str:
 
 
 def _typed_aspects(typed: TypedDimensionValue) -> list[str]:
+    """A typed member as aoix aspects; a nil member is aoix's bare ``nil``."""
+    value = "nil" if typed.value is None else aoix_quote(typed.value)
     return [
         f"typed-value-wrapper={typed.wrapper}",
-        f"{typed.dimension.qname}={aoix_quote(typed.value)}",
+        f"{typed.dimension.qname}={value}",
     ]
 
 

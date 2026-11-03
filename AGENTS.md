@@ -262,7 +262,11 @@ measures; `Unit.fromUnitString("(a*b)/c", resolve)` / `unit.toUnitString()` are 
 string), `decimals`, `scale`, `ExplicitDimensionValue`s, `TypedDimensionValue`s (the member's text,
 unescaped) and enumeration members. Build one with a `FactBuilder`, which keeps its setters
 (`setSimpleUnit`, `setCurrency`, `setNamedPeriod`, `setTypedDimension`,
-`setEnumerationValue`/`setEnumerationSet`...) and does the validation. **aoix text is written in exactly
+`setEnumerationValue`/`setEnumerationSet`...) and does the validation. A typed member of None is a nil
+member (xBRL-JSON's null, aoix's bare `nil`, an empty wrapper with `xsi:nil` in the context): the only way
+to leave out a typed dimension of a closed hypercube, which has no default, so ESRS's GHG tables need it.
+The reader takes one only for a nillable wrapper element. It counts for the fact's identity and for
+dimensional validity, but not for layout: `Fact.shown_typed_dimensions` leaves it out. **aoix text is written in exactly
 one place, `mireport/report/aoix.py`**, from those fields and in the current syntax only
 (`typed-value-wrapper=`, `units=a/b`); `period-type`, `escape`, `transform` and `fn-refs` are derived there,
 not stored. A typed value that aoix cannot quote (a double quote) is refused rather than written with the

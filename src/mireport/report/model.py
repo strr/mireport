@@ -160,15 +160,19 @@ class TypedDimensionValue:
     """A typed dimension's member: the text inside its wrapper element, as the author gave it.
 
     Not XML-escaped (aoix escapes it when it writes the context) and without the characters a
-    context cannot carry. The wrapper element is the dimension's own ``typedElement``.
+    context cannot carry. The wrapper element is the dimension's own ``typedElement``. None is a
+    nil member: a closed hypercube's typed dimension that a fact does not use, which it can
+    only leave out by giving it a nil wrapper element (typed dimensions have no default).
     """
 
     dimension: Concept
-    value: str
+    value: str | None
 
     @classmethod
-    def of(cls, dimension: Concept, value: FactValue) -> TypedDimensionValue:
+    def of(cls, dimension: Concept, value: FactValue | None) -> TypedDimensionValue:
         match value:
+            case None:
+                return cls(dimension, None)
             case bool():
                 text = str(value).lower()
             case _:

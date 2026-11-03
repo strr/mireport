@@ -293,7 +293,7 @@ class ReportLayoutOrganiser:
         dimensions as its sub-heading ("By Target Category and Target Identifier")."""
         bySignature: dict[tuple[Concept, ...], list[Placed]] = {}
         for rel, fact in placed:
-            dimensions = {*fact.explicit_dimensions, *fact.typed_dimensions}
+            dimensions = {*fact.explicit_dimensions, *fact.shown_typed_dimensions}
             signature = tuple(sorted(dimensions, key=lambda d: str(d.qname)))
             bySignature.setdefault(signature, []).append((rel, fact))
         return [

@@ -103,8 +103,9 @@ class FactBuilder:
         return self
 
     def setTypedDimension(
-        self, typedDimension: Concept, typedDimensionValue: FactValue
+        self, typedDimension: Concept, typedDimensionValue: FactValue | None
     ) -> Self:
+        """``typedDimensionValue`` None is a nil member, for a nillable wrapper element."""
         assert typedDimension.isTypedDimension, (
             f"Concept {typedDimension=} is not a typed dimension."
         )
@@ -356,7 +357,7 @@ class FactBuilder:
         self,
         taxonomy: Taxonomy,
         explicitDims: dict[Concept, Concept],
-        typedDims: dict[Concept, str],
+        typedDims: dict[Concept, str | None],
     ) -> None:
         """Easy checks for XBRL validity to avoid mistakes. Still possible to create invalid facts.
 

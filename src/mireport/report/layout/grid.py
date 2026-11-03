@@ -192,11 +192,17 @@ class GridBuilder:
         """The text of one typed dimension (down the side, in numeric order) against concepts."""
         facts = [f for concept in reportable for f in self._facts_for(concept)]
         texts = sorted(
-            {t for f in facts if (t := f.typed_dimensions.get(dimension)) is not None},
+            {
+                t
+                for f in facts
+                if (t := f.shown_typed_dimensions.get(dimension)) is not None
+            },
             key=numeric_string_key,
         )
         cells = _place(
-            facts, lambda f: f.typed_dimensions.get(dimension), lambda f: f.concept
+            facts,
+            lambda f: f.shown_typed_dimensions.get(dimension),
+            lambda f: f.concept,
         )
         rows, data, columns, spread = self._arrange(texts, reportable, cells)
         return FactGrid(
@@ -282,7 +288,7 @@ class GridBuilder:
 
         def key_of(fact: Fact) -> DimensionKey:
             values: dict[Concept, Concept | str] = dict(fact.explicit_dimensions)
-            values.update(fact.typed_dimensions)
+            values.update(fact.shown_typed_dimensions)
             return tuple(values[dimension] for dimension in signature)
 
         cells = _place(

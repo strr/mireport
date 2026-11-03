@@ -257,9 +257,15 @@ class Fact:
         return {d.dimension: d.member for d in self.explicit_values}
 
     @property
-    def typed_dimensions(self) -> dict[Concept, str]:
-        """Typed dimension to its member's text."""
+    def typed_dimensions(self) -> dict[Concept, str | None]:
+        """Typed dimension to its member's text, None for a nil member."""
         return {d.dimension: d.value for d in self.typed_values}
+
+    @property
+    def shown_typed_dimensions(self) -> dict[Concept, str]:
+        """The typed dimensions a reader is shown: a nil member says the fact is not broken
+        down by that dimension, so it is left out of the layout (but not of the fact)."""
+        return {d.dimension: d.value for d in self.typed_values if d.value is not None}
 
     @property
     def hasNonDefaultPeriod(self) -> bool:

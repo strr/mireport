@@ -279,25 +279,50 @@ def test_a_nil_monetary_fact_still_needs_its_currency(
     assert "currency" in message
 
 
-def test_a_nil_typed_dimension_value_is_skipped_not_read_as_none(
+def _typedAxis(taxonomy: Taxonomy, f: dict) -> str | None:
+    return next(
+        (
+            n
+            for n in f["dimensions"]
+            if ":" in n and taxonomy.getConcept(n).isTypedDimension
+        ),
+        None,
+    )
+
+
+def test_a_nil_typed_dimension_value_is_a_nil_member(
     doc: dict[str, Any], taxonomy: Taxonomy
 ) -> None:
-    def typedAxis(f: dict) -> str | None:
-        return next(
-            (
-                n
-                for n in f["dimensions"]
-                if ":" in n and taxonomy.getConcept(n).isTypedDimension
-            ),
-            None,
-        )
-
-    factId, fact = _first(doc, taxonomy, lambda c, f: typedAxis(f) is not None)
-    axis = typedAxis(fact)
+    """xBRL-JSON's null is xsi:nil on the typed wrapper, which a closed hypercube with typed
+    dimensions a fact does not use needs (ESRS's GHG tables). VSME's wrappers are nillable."""
+    _, fact = _first(doc, taxonomy, lambda c, f: _typedAxis(taxonomy, f) is not None)
+    axis = _typedAxis(taxonomy, fact)
     assert axis is not None
+    assert taxonomy.getConcept(axis).typedElement.isNillable
+    fact["dimensions"][axis] = None
+    processor, _ = _read(doc)
+    assert processor.factsSkipped == 0
+    (read,) = [
+        f
+        for f in processor.report.facts
+        if taxonomy.getConcept(axis) in f.typed_dimensions
+        and f.typed_dimensions[taxonomy.getConcept(axis)] is None
+    ]
+    assert taxonomy.getConcept(axis) not in read.shown_typed_dimensions
+
+
+def test_a_nil_typed_dimension_value_needs_a_nillable_wrapper(
+    doc: dict[str, Any], taxonomy: Taxonomy, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factId, fact = _first(
+        doc, taxonomy, lambda c, f: _typedAxis(taxonomy, f) is not None
+    )
+    axis = _typedAxis(taxonomy, fact)
+    assert axis is not None
+    monkeypatch.setattr(taxonomy.getConcept(axis).typedElement, "isNillable", False)
     fact["dimensions"][axis] = None
     _, message = _skipped(doc, factId)
-    assert "nil value" in message
+    assert "not nillable" in message and "oime:invalidDimensionValue" in message
 
 
 def _declareLanguages(
