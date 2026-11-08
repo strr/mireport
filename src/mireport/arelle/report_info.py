@@ -112,18 +112,22 @@ class ArelleReportProcessor:
         *,
         taxonomyPackages: list[Path] | None = None,
         workOffline: bool = True,
+        cacheDirectory: Path | None = None,
     ):
         self.workOffline = bool(workOffline)
+        self.cacheDirectory = cacheDirectory
         self.taxonomyPackages: list[Path] = []
         if taxonomyPackages is not None:
             self.taxonomyPackages.extend(taxonomyPackages)
 
     def _run(
         self,
-        reportPackage: FilelikeAndFileName,
+        reportPackage: FilelikeAndFileName | None,
         options: RuntimeOptions,
         responseZipStream: BinaryIO | None = None,
     ) -> ArelleProcessingResult:
+        """Run Arelle on ``reportPackage``, or with none, on the file ``options.entrypointFile``
+        names."""
         ###############################
         #  Arelle is _NOT_ thread safe.
         ###############################
@@ -171,19 +175,28 @@ class ArelleReportProcessor:
                 except Exception:
                     L.exception("Failed to reset Arelle package and plugin managers")
                 started = perf_counter_ns()
-                with (
-                    Session() as session,
-                    reportPackage.fileLike() as requestZipStream,
-                ):
-                    session.run(
-                        options,
-                        sourceZipStream=requestZipStream,
-                        responseZipStream=responseZipStream,
-                        logFilters=[],
-                    )
-                    result = ArelleProcessingResult.fromSession(session)
+                if reportPackage is None:
+                    with Session() as session:
+                        session.run(
+                            options,
+                            responseZipStream=responseZipStream,
+                            logFilters=[],
+                        )
+                        result = ArelleProcessingResult.fromSession(session)
+                else:
+                    with (
+                        Session() as session,
+                        reportPackage.fileLike() as requestZipStream,
+                    ):
+                        session.run(
+                            options,
+                            sourceZipStream=requestZipStream,
+                            responseZipStream=responseZipStream,
+                            logFilters=[],
+                        )
+                        result = ArelleProcessingResult.fromSession(session)
+                    assert requestZipStream.closed, "Forgot to close the stream."
                 result.elapsedNs = perf_counter_ns() - started
-                assert requestZipStream.closed, "Forgot to close the stream."
                 return result
             except Exception as arelle_exception:
                 message = "Exception encountered while calling Arelle for report."
@@ -204,6 +217,7 @@ class ArelleReportProcessor:
         INLINE_DOCUMENT_SET_PLUGIN."""
         return RuntimeOptions(
             internetConnectivity="offline" if self.workOffline else "online",
+            cacheDirectory=str(self.cacheDirectory) if self.cacheDirectory else None,
             keepOpen=True,
             logFile="logToBuffer",
             logFormat="%(message)s",
@@ -231,6 +245,18 @@ class ArelleReportProcessor:
             plugins=[INLINE_DOCUMENT_SET_PLUGIN],
         )
         return self._run(source, options)
+
+    def validateFile(
+        self, path: str | Path, *, taxonomyPackage: bool = False
+    ) -> ArelleProcessingResult:
+        """Validate a file Arelle opens itself, by path or URL, as arelleCmdLine -f does: a
+        taxonomy entry point, or an xBRL-JSON, xBRL-CSV or Inline XBRL report as it stands, not
+        wrapped in a report package (so no report package rules apply); with
+        ``taxonomyPackage``, a taxonomy package (arelleCmdLine --taxonomyPackage)."""
+        options = self._makeOptions(plugins=[INLINE_DOCUMENT_SET_PLUGIN])
+        options.entrypointFile = str(path)
+        options.taxonomyPackage = taxonomyPackage
+        return self._run(None, options)
 
     def validateXbrlJson(self, document: FilelikeAndFileName) -> ArelleProcessingResult:
         """Validate an xBRL-JSON document with Arelle, which loads OIM natively: the OIM and
