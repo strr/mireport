@@ -13,9 +13,13 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from collections.abc import Iterable
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from mireport.exceptions import InlineReportException
+from mireport.exceptions import (
+    InlineReportException,
+    UnsupportedTaxonomyFeatureException,
+)
 from mireport.report.duplicates import DuplicateClass, duplicateClass
 from mireport.report.fact import Fact
 from mireport.report.layout.entries import list_entries
@@ -69,7 +73,21 @@ class ReportLayoutOrganiser:
         self.reportSections.sort(key=lambda x: x.presentation)
         self.reportSections = layout.organise_sections(self.reportSections)
         self.checkAllFactsUsed()
-        return [s for s in self.reportSections if s.hasFacts]
+        return self._continuations([s for s in self.reportSections if s.hasFacts])
+
+    @staticmethod
+    def _continuations(sections: list[ReportSection]) -> list[ReportSection]:
+        """Each section marked as continuing the one above when both show the same group, so the
+        group's title is shown once, over the first, with one table-of-contents entry. Decided on
+        the final order, after sections with nothing to show are gone, so a group never loses its
+        title to a block that was dropped."""
+        marked: list[ReportSection] = []
+        for section in sections:
+            follows = bool(marked) and marked[-1].presentation is section.presentation
+            if section.continuation != follows:
+                section = replace(section, continuation=follows)
+            marked.append(section)
+        return marked
 
     # -- checking ------------------------------------------------------------------------------
 
@@ -158,7 +176,7 @@ class ReportLayoutOrganiser:
                 )
                 continue
 
-            for blockNumber, block in enumerate(group.blocks):
+            for block in group.blocks:
                 factsForRel: dict[Relationship, list[Fact]] = defaultdict(list)
                 for rel in block.rows:
                     if not (facts := self.report.getFacts(rel.concept)):
@@ -167,6 +185,8 @@ class ReportLayoutOrganiser:
                         factsForRel[rel].extend(facts)
                         continue
                     for fact in facts:
+                        if not self._admits(group.roleUri, fact):
+                            continue
                         if fact.hasTaxonomyDimensions():
                             self._dimensional.setdefault(group.roleUri, []).append(
                                 (rel, fact)
@@ -179,7 +199,6 @@ class ReportLayoutOrganiser:
                         presentation=group,
                         block=block,
                         subheading=self._block_heading(group, block),
-                        continuation=blockNumber > 0,
                         entries=(
                             list_entries(factsForRel, self._period_rank)
                             if block.kind is BlockKind.LINE_ITEMS
@@ -187,6 +206,29 @@ class ReportLayoutOrganiser:
                         ),
                     )
                 )
+
+    def _admits(self, roleUri: str, fact: Fact) -> bool:
+        """Whether a line-items group of a role is a home for a fact. A role with hypercubes for
+        the fact's concept takes the facts that fit one of them; a role with none takes the facts
+        with no dimensions. So a target's time horizon is shown with the targets, not again among
+        the foundations that present the plan's own, and the plan's own is not repeated among the
+        targets. A fact no role takes still has a table, among the facts shown nowhere."""
+        try:
+            effective = [
+                cube
+                for cube in self.taxonomy.getEffectiveHypercubesForPrimaryItem(
+                    fact.concept
+                )
+                if cube.roleUri == roleUri
+            ]
+        except UnsupportedTaxonomyFeatureException:
+            return True
+        if not effective:
+            return not fact.hasTaxonomyDimensions()
+        return any(
+            cube.matches(fact.explicit_dimensions, fact.typed_dimensions)
+            for cube in effective
+        )
 
     def _block_heading(self, group: PresentationGroup, block: PresentationBlock) -> str:
         """What tells a group's blocks apart in their sub-headings: nothing for a group of one
@@ -202,16 +244,39 @@ class ReportLayoutOrganiser:
     def createReportTables(self) -> None:
         """Tables for the table groups, and for whatever any group could not place."""
         groups = list(self.reportSections)
+        cubes = {
+            id(section): self._hypercube_table(section)
+            for section in groups
+            if section.style is PresentationStyle.Table
+        }
+        # A dimensionally qualified fact of a line-items group is shown there only if no cube
+        # shows it: a target's time horizon belongs in the targets table, not again, in a table
+        # of its own, under every group that lists the time horizon concept.
+        inCubes = {
+            cell.fact
+            for table in cubes.values()
+            if table is not None
+            for row in table.table.rows
+            for cell in row.cells
+            if cell.fact is not None
+        }
+        inCubesByKey = self._by_duplicate_key(inCubes)
         sections: list[ReportSection] = []
         for section in groups:
             if section.style is PresentationStyle.Table:
-                if (table := self._hypercube_table(section)) is not None:
+                if (table := cubes[id(section)]) is not None:
                     sections.append(table)
             else:
                 sections.append(section)
                 # Once per group, with its first block of line items.
+                placed = self._dimensional.pop(section.presentation.roleUri, [])
                 sections += self._dimension_set_tables(
-                    section, self._dimensional.pop(section.presentation.roleUri, [])
+                    section,
+                    [
+                        (rel, fact)
+                        for rel, fact in placed
+                        if not self._is_covered(fact, inCubes, inCubesByKey)
+                    ],
                 )
         self.reportSections = sections
         self.reportSections += self._tables_for_facts_shown_nowhere(groups)
@@ -315,10 +380,7 @@ class ReportLayoutOrganiser:
             relationshipToFact=section.relationshipToFact,
             presentation=section.presentation,
             block=section.block,
-            # A table for leftover facts stands apart from its group, so it has the group's title
-            # again rather than continuing it.
             subheading=section.subheading if subheading is None else subheading,
-            continuation=section.continuation and subheading is None,
             table=assemble_table(grid),
         )
 

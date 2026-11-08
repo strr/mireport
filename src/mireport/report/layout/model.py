@@ -131,8 +131,8 @@ class ReportSection:
     # Sub-heading over this section's table or list when its group yields several; the group's
     # own title, which is never altered, is shown once, over the first.
     subheading: str = field(default="", kw_only=True)
-    # True for every block after the first of its group: it shares the first block's section
-    # title and table-of-contents entry.
+    # True for a section that follows another of its own group: it shares that section's title
+    # and table-of-contents entry (set by ReportLayoutOrganiser.organise, on the final order).
     continuation: bool = field(default=False, kw_only=True)
     # What a list section shows, line by line; empty for any other kind of section.
     entries: tuple[ListEntry, ...] = field(default=(), kw_only=True, compare=False)
