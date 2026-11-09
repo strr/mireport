@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -23,7 +22,7 @@ from rcssmin import cssmin
 import mireport
 from mireport.data.disclosures import getReportTranslations
 from mireport.exceptions import InlineReportException
-from mireport.filesupport import FilelikeAndFileName, zipSafeString
+from mireport.filesupport import FilelikeAndFileName, sourceDateEpoch, zipSafeString
 from mireport.localise import (
     as_xmllang,
     decimal_symbol,
@@ -51,14 +50,6 @@ from mireport.taxonomy import PresentationStyle, Taxonomy
 L = logging.getLogger(__name__)
 
 
-def _now_utc() -> datetime:
-    """The report's generation time. SOURCE_DATE_EPOCH (https://reproducible-builds.org/specs/
-    source-date-epoch/) pins it, so a build can be made byte-for-byte reproducible."""
-    if epoch := os.environ.get("SOURCE_DATE_EPOCH", "").strip():
-        return datetime.fromtimestamp(int(epoch), UTC)
-    return datetime.now(UTC)
-
-
 def msgid(text: str) -> str:
     """Marks ``text`` as a msgid where it is defined; the template translates it."""
     return text
@@ -82,8 +73,18 @@ class InlineReport(Report):
     """A Report as an Inline XBRL document: what it says in which language and locale, how it
     looks, and how it is packaged."""
 
-    def __init__(self, taxonomy: Taxonomy, outputLocale: Locale | None = None):
+    def __init__(
+        self,
+        taxonomy: Taxonomy,
+        outputLocale: Locale | None = None,
+        creationDateTime: datetime | None = None,
+    ):
         super().__init__(taxonomy)
+        # When the report was made: the report states it, and its package's files carry it. Given,
+        # or SOURCE_DATE_EPOCH (so a build can be byte-for-byte reproducible), or now.
+        self.creationDateTime: datetime = (
+            creationDateTime or sourceDateEpoch(default=None) or datetime.now(UTC)
+        )
         self._entityName: str = "Sample"
         # When set, rendering fails if any fact would appear nowhere in the report, instead of
         # leaving it out. A report built from data we did not author wants this; the Excel
@@ -315,7 +316,7 @@ class InlineReport(Report):
             {
                 PresentationStyle.__name__: PresentationStyle,
                 TableStyle.__name__: TableStyle,
-                "now_utc": _now_utc,
+                "creation_datetime": self.creationDateTime,
                 "labelLanguage": label_language,
                 "labelQNameFallback": label_language is None,
                 "label_overrides_by_concept": self._labelOverrides,
@@ -440,6 +441,7 @@ class InlineReport(Report):
             topLevel=self.packageTopLevelName,
             docsetMembers=docsetMembers,
             attachments=attachments,
+            timestamp=self.creationDateTime,
         )
 
     def reportUntranslatedStrings(self, results: ConversionResultsBuilder) -> None:

@@ -4,7 +4,7 @@
 {{ aoix.periods }}
 {{ aoix.defaults }}
 {% set ns = namespace(fact_count = 0) %}
-{% set timestamp = now_utc() %}
+{% set timestamp = creation_datetime %}
 <!DOCTYPE html>
 <html xml:lang="{{ reportInfo.language }}"
   xmlns="http://www.w3.org/1999/xhtml"
