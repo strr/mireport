@@ -231,10 +231,10 @@ class TestAgainstStubBinary:
             ("wéird–name.pdf", "wéird_name.xhtml"),
             ("UPPER.PDF", "UPPER.xhtml"),
             ("no_extension", "no_extension.xhtml"),
-            # zipSafeString keeps only word characters and dots, so a hyphen
-            # becomes an underscore. Shared with entity names rather than
-            # forked for PDFs, so filenames sanitise the one familiar way.
-            ("annual-report.pdf", "annual_report.xhtml"),
+            # zipSafeString keeps the POSIX portable filename characters, a
+            # hyphen among them. Shared with entity names rather than forked
+            # for PDFs, so filenames sanitise the one familiar way.
+            ("annual-report.pdf", "annual-report.xhtml"),
             (".pdf", "pdf.xhtml"),
             ("...", "annex.xhtml"),
         ],

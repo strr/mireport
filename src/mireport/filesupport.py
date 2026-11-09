@@ -19,7 +19,8 @@ if TYPE_CHECKING:
 
 from mireport.stringutil import format_bytes
 
-ZIP_UNWANTED_RE = re.compile(r"[^\w.]+")  # \w includes '_'
+# Keep the POSIX portable filename characters: letters, digits, '.', '_' (in \w) and '-'
+ZIP_UNWANTED_RE = re.compile(r"[^\w.-]+")
 
 # mireport's reproducible-build epoch: the date of the XBRL 2.1 Recommendation. A file mireport
 # writes with no time of its own (a report package's entries, say) carries it unless

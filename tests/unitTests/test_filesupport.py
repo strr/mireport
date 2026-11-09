@@ -83,8 +83,9 @@ class TestZipSafeString:
         [
             ("good filename.txt", "good_filename.txt"),
             ("normal_name.doc", "normal_name.doc"),
+            ("annual-report-2024.pdf", "annual-report-2024.pdf"),
         ],
-        ids=["space-to-underscore", "no-change"],
+        ids=["space-to-underscore", "no-change", "hyphens-kept"],
     )
     def test_valid_input(self, input_text: str, expected: str) -> None:
         assert zipSafeString(input_text) == expected
