@@ -15,13 +15,16 @@ correctness requirement, not a preference.
 """
 
 import zipfile
+from datetime import UTC, datetime
 from io import BytesIO
 
 import pytest
 
-from mireport.filesupport import FilelikeAndFileName
+from mireport.filesupport import DEFAULT_EPOCH, FilelikeAndFileName
 from mireport.report.reportpackage import (
+    INLINE_REPORT_PACKAGE_JSON,
     UNCONSTRAINED_REPORT_PACKAGE_JSON,
+    ReportPackageException,
     buildReportPackage,
 )
 
@@ -341,3 +344,87 @@ class TestZipSafety:
         )
         names = namelist(package)
         assert len(names) == len(set(names))
+
+
+class TestInlinePackage:
+    """An .xbri: the Inline XBRL report package type, with the files a report links to."""
+
+    RESOURCES = (("images/page-1.webp", b"RIFF"), ("fonts/a.woff", b"wOFF"))
+
+    def test_marker_and_name(self) -> None:
+        package = buildReportPackage(REPORT, topLevel=TOP, inline=True)
+        assert package.filename == f"{TOP}.xbri"
+        assert (
+            readEntry(package, f"{TOP}/META-INF/reportPackage.json")
+            == INLINE_REPORT_PACKAGE_JSON
+        )
+
+    def test_resources_sit_beside_the_report_in_its_own_directory(self) -> None:
+        package = buildReportPackage(
+            REPORT, topLevel=TOP, inline=True, resources=self.RESOURCES
+        )
+        here = f"{TOP}/reports/Acme_2024_XBRL_Report"
+        assert namelist(package) == [
+            f"{TOP}/META-INF/reportPackage.json",
+            f"{here}/Acme_2024_XBRL_Report.html",
+            f"{here}/fonts/a.woff",
+            f"{here}/images/page-1.webp",
+        ]
+        assert readEntry(package, f"{here}/images/page-1.webp") == b"RIFF"
+
+    def test_only_inline_xbrl(self) -> None:
+        with pytest.raises(ReportPackageException):
+            buildReportPackage(
+                makeFile("report.json", b"{}"), topLevel=TOP, inline=True
+            )
+
+    @pytest.mark.parametrize(
+        "path", ["../x.png", "/x.png", "images/../../x.png", "page.html", "data.json"]
+    )
+    def test_a_resource_stays_beside_the_report_and_is_not_a_report(
+        self, path: str
+    ) -> None:
+        with pytest.raises(ReportPackageException):
+            buildReportPackage(REPORT, topLevel=TOP, resources=[(path, b"x")])
+
+    def test_resources_with_one_path(self) -> None:
+        with pytest.raises(ReportPackageException):
+            buildReportPackage(
+                REPORT, topLevel=TOP, resources=[("a.png", b"1"), ("a.png", b"2")]
+            )
+
+
+class TestTimestamp:
+    """One time on every entry, so a package can be rebuilt byte for byte."""
+
+    def times(self, package: FilelikeAndFileName) -> set[tuple[int, ...]]:
+        with zipfile.ZipFile(BytesIO(package.fileContent)) as zf:
+            return {info.date_time for info in zf.infolist()}
+
+    def test_given(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SOURCE_DATE_EPOCH", "1767225600")
+        package = buildReportPackage(
+            REPORT, topLevel=TOP, timestamp=datetime(2023, 10, 9, tzinfo=UTC)
+        )
+        assert self.times(package) == {(2023, 10, 9, 0, 0, 0)}
+
+    def test_source_date_epoch(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SOURCE_DATE_EPOCH", "1767225600")
+        assert self.times(buildReportPackage(REPORT, topLevel=TOP)) == {
+            (2026, 1, 1, 0, 0, 0)
+        }
+
+    def test_mireport_epoch_by_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("SOURCE_DATE_EPOCH", raising=False)
+        assert self.times(buildReportPackage(REPORT, topLevel=TOP)) == {
+            (2003, 12, 31, 0, 0, 0)
+        }
+        assert DEFAULT_EPOCH == datetime(2003, 12, 31, tzinfo=UTC)
+
+    def test_two_builds_are_the_same_bytes(self) -> None:
+        def build() -> bytes:
+            return buildReportPackage(
+                REPORT, topLevel=TOP, inline=True, resources=TestInlinePackage.RESOURCES
+            ).fileContent
+
+        assert build() == build()

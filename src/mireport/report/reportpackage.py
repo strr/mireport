@@ -19,6 +19,17 @@ into the document set directory with them, and nothing is left directly in
 ``reports/``. Content that is not part of the document set (the original PDFs)
 goes to ``attachments/``, outside ``reports/`` altogether, where no discovery
 path looks at it.
+
+Resources (a report's images, fonts, stylesheets: files it links to by a relative
+path) go beside the report, so those links resolve in the package as they did
+outside it. They too move the report into a subdirectory of ``reports/``, so
+they never sit directly under it. Discovery only takes files with a report
+extension, at most one directory down, so a resource is never mistaken for a
+report; one with a report extension is refused rather than risk it.
+
+Every entry carries one timestamp (the report's creation time, else
+SOURCE_DATE_EPOCH, else mireport's epoch), and entries are written in a fixed
+order, so building the same package twice gives the same bytes.
 """
 
 from __future__ import annotations
@@ -28,10 +39,11 @@ from io import BytesIO
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from mireport.filesupport import FilelikeAndFileName, zipSafeString
+from mireport.filesupport import FilelikeAndFileName, sourceDateEpoch, zipSafeString
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from datetime import datetime
 
 UNCONSTRAINED_REPORT_PACKAGE_JSON = b"""{
     "documentInfo": {
@@ -48,6 +60,34 @@ INLINE_REPORT_PACKAGE_JSON = b"""{
 METADATA_DIRECTORY = "META-INF"
 REPORTS_DIRECTORY = "reports"
 ATTACHMENTS_DIRECTORY = "attachments"
+
+# What Arelle loads as a report from a report package (and so what a resource may not be)
+REPORT_EXTENSIONS = frozenset(
+    {".html", ".htm", ".xhtml", ".json", ".xbrl", ".xml", ".csv"}
+)
+INLINE_EXTENSIONS = frozenset({".html", ".htm", ".xhtml"})
+
+
+class ReportPackageException(ValueError):
+    """A report package that cannot be built as asked."""
+
+
+def _resourcePath(path: str) -> str:
+    """@path as a relative POSIX path that stays inside the report's directory."""
+    p = PurePosixPath(path.replace("\\", "/"))
+    if (
+        p.is_absolute()
+        or not p.parts
+        or any(part in ("", ".", "..") for part in p.parts)
+    ):
+        raise ReportPackageException(
+            f"resource path {path!r} must be relative and stay beside the report"
+        )
+    if p.suffix.lower() in REPORT_EXTENSIONS:
+        raise ReportPackageException(
+            f"resource {path!r} has a report extension, so Arelle would load it as a report"
+        )
+    return p.as_posix()
 
 
 def _safeFilename(filename: str, *, fallback: str) -> str:
@@ -85,8 +125,12 @@ def buildReportPackage(
     topLevel: str,
     docsetMembers: Sequence[FilelikeAndFileName] = (),
     attachments: Sequence[FilelikeAndFileName] = (),
+    resources: Sequence[tuple[str, bytes]] = (),
+    inline: bool = False,
+    timestamp: datetime | None = None,
 ) -> FilelikeAndFileName:
-    """Build an unconstrained report package containing @report.
+    """Build a report package containing @report: unconstrained (``.zip``), or with
+    @inline an Inline XBRL report package (``.xbri``).
 
     :param topLevel: name of the package's single top-level directory.
     :param docsetMembers: further Inline XBRL documents to be loaded as one
@@ -95,19 +139,42 @@ def buildReportPackage(
         after the report, because a document set's order is its zip order.
     :param attachments: content to travel with the report without being part of
         it (the source PDFs). Written to ``attachments/``.
+    :param resources: (relative path, content) pairs the report links to, such as
+        ``images/page-1.webp``: written beside the report, so the links resolve.
+    :param inline: an Inline XBRL report package: the ``xbri`` document type and
+        extension, and only Inline XBRL documents in it.
+    :param timestamp: every entry's time; else SOURCE_DATE_EPOCH, else mireport's
+        epoch (:data:`mireport.filesupport.DEFAULT_EPOCH`).
     """
     top = zipSafeString(topLevel, fallback="report")
+    stamp = (timestamp or sourceDateEpoch()).timetuple()[:6]
+    if inline:
+        for document in (report, *docsetMembers):
+            if PurePosixPath(document.filename).suffix.lower() not in INLINE_EXTENSIONS:
+                raise ReportPackageException(
+                    f"an .xbri holds Inline XBRL only, not {document.filename!r}"
+                )
+    paths = [_resourcePath(path) for path, _ in resources]
+    if len(set(paths)) != len(paths):
+        raise ReportPackageException("two resources have the same path")
     content = BytesIO()
     with zipfile.ZipFile(
         content, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
     ) as zf:
-        zf.writestr(
-            zinfo_or_arcname=f"{top}/{METADATA_DIRECTORY}/reportPackage.json",
-            data=UNCONSTRAINED_REPORT_PACKAGE_JSON,
+
+        def write(name: str, data: bytes) -> None:
+            info = zipfile.ZipInfo(name, stamp)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            zf.writestr(info, data, compresslevel=6)
+
+        write(
+            f"{top}/{METADATA_DIRECTORY}/reportPackage.json",
+            INLINE_REPORT_PACKAGE_JSON if inline else UNCONSTRAINED_REPORT_PACKAGE_JSON,
         )
 
         reportFilename = _safeFilename(report.filename, fallback="report.html")
-        if docsetMembers:
+        if docsetMembers or resources:
             reportDir = (
                 f"{top}/{REPORTS_DIRECTORY}/{PurePosixPath(reportFilename).stem}"
             )
@@ -121,7 +188,13 @@ def buildReportPackage(
             name = _uniqueFilename(
                 _safeFilename(file.filename, fallback="report.html"), usedInReportDir
             )
-            zf.writestr(zinfo_or_arcname=f"{reportDir}/{name}", data=file.fileContent)
+            write(f"{reportDir}/{name}", file.fileContent)
+        for path, data in sorted(zip(paths, (data for _, data in resources))):
+            if path in usedInReportDir:
+                raise ReportPackageException(
+                    f"resource {path!r} has the name of a report document"
+                )
+            write(f"{reportDir}/{path}", data)
 
         usedInAttachmentDir: set[str] = set()
         for attachment in attachments:
@@ -129,11 +202,9 @@ def buildReportPackage(
                 _safeFilename(attachment.filename, fallback="attachment"),
                 usedInAttachmentDir,
             )
-            zf.writestr(
-                zinfo_or_arcname=f"{top}/{ATTACHMENTS_DIRECTORY}/{name}",
-                data=attachment.fileContent,
-            )
+            write(f"{top}/{ATTACHMENTS_DIRECTORY}/{name}", attachment.fileContent)
 
     return FilelikeAndFileName(
-        fileContent=content.getvalue(), filename=f"{top}_XBRL_Report.zip"
+        fileContent=content.getvalue(),
+        filename=f"{top}.xbri" if inline else f"{top}_XBRL_Report.zip",
     )

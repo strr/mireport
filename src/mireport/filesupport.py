@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import base64
+import os
 import re
+from datetime import UTC, datetime
 from io import BytesIO, UnsupportedOperation
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
@@ -18,6 +20,21 @@ if TYPE_CHECKING:
 from mireport.stringutil import format_bytes
 
 ZIP_UNWANTED_RE = re.compile(r"[^\w.]+")  # \w includes '_'
+
+# mireport's reproducible-build epoch: the date of the XBRL 2.1 Recommendation. A file mireport
+# writes with no time of its own (a report package's entries, say) carries it unless
+# SOURCE_DATE_EPOCH says otherwise.
+DEFAULT_EPOCH = datetime(2003, 12, 31, tzinfo=UTC)
+
+
+def sourceDateEpoch(default: datetime | None = DEFAULT_EPOCH) -> datetime | None:
+    """SOURCE_DATE_EPOCH (https://reproducible-builds.org/specs/source-date-epoch/) as a UTC
+    datetime when it is set, else @default."""
+    if epoch := os.environ.get("SOURCE_DATE_EPOCH", "").strip():
+        return datetime.fromtimestamp(int(epoch), UTC)
+    return default
+
+
 FILE_UNWANTED_RE = re.compile(r'[<>:"/\\|?*]')
 
 
