@@ -27,6 +27,14 @@ they never sit directly under it. Discovery only takes files with a report
 extension, at most one directory down, so a resource is never mistaken for a
 report; one with a report extension is refused rather than risk it.
 
+A reporter's own extension taxonomy can travel in the package too (an ESEF
+filing's extension does): given as taxonomy packages, their files go under the
+top-level directory at their own paths, their catalogs merge into one
+``META-INF/catalog.xml`` and their metadata into one ``META-INF/taxonomyPackage.xml``,
+so the report package is a taxonomy package as well, and its report's schemaRef
+resolves inside it. Only the reporter's own taxonomy belongs there: what it
+imports from published taxonomies stays for the reader to load.
+
 Every entry carries one timestamp (the report's creation time, else
 SOURCE_DATE_EPOCH, else mireport's epoch), and entries are written in a fixed
 order, so building the same package twice gives the same bytes.
@@ -34,6 +42,7 @@ order, so building the same package twice gives the same bytes.
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 import zipfile
 from io import BytesIO
 from pathlib import PurePosixPath
@@ -70,6 +79,94 @@ INLINE_EXTENSIONS = frozenset({".html", ".htm", ".xhtml"})
 
 class ReportPackageException(ValueError):
     """A report package that cannot be built as asked."""
+
+
+CATALOG_NS = "urn:oasis:names:tc:entity:xmlns:xml:catalog"
+TAXONOMY_PACKAGE_NS = "http://xbrl.org/2016/taxonomy-package"
+
+
+def _taxonomyContent(
+    packages: Sequence[bytes],
+) -> tuple[dict[str, bytes], bytes | None, bytes | None]:
+    """The files of @packages (taxonomy package zips) by path below their top-level
+    directory, and their catalogs and metadata merged into one of each."""
+    files: dict[str, bytes] = {}
+    rewrites: dict[str, str] = {}
+    metadata: ET.Element | None = None
+    for index, package in enumerate(packages):
+        with zipfile.ZipFile(BytesIO(package)) as zf:
+            names = [n for n in zf.namelist() if not n.endswith("/")]
+            tops = {n.split("/", 1)[0] for n in names}
+            if len(tops) != 1:
+                raise ReportPackageException(
+                    f"taxonomy package {index} has {len(tops)} top-level directories, not one"
+                )
+            (pkgTop,) = tops
+            meta = f"{pkgTop}/{METADATA_DIRECTORY}/"
+            if (
+                f"{meta}catalog.xml" not in names
+                or f"{meta}taxonomyPackage.xml" not in names
+            ):
+                raise ReportPackageException(
+                    f"taxonomy package {pkgTop!r} has no META-INF/catalog.xml and taxonomyPackage.xml"
+                )
+            for entry in ET.fromstring(zf.read(f"{meta}catalog.xml")).iter(
+                f"{{{CATALOG_NS}}}rewriteURI"
+            ):
+                start, prefix = entry.get("uriStartString"), entry.get("rewritePrefix")
+                if rewrites.setdefault(start, prefix) != prefix:
+                    raise ReportPackageException(
+                        f"two taxonomy packages rewrite {start!r} differently"
+                    )
+            info = ET.fromstring(zf.read(f"{meta}taxonomyPackage.xml"))
+            if metadata is None:
+                metadata = info
+            else:
+                into = metadata.find(f"{{{TAXONOMY_PACKAGE_NS}}}entryPoints")
+                for entryPoint in info.iter(f"{{{TAXONOMY_PACKAGE_NS}}}entryPoint"):
+                    into.append(entryPoint)
+            for name in names:
+                if name.startswith(meta):
+                    continue
+                path = name.split("/", 1)[1]
+                if path.split("/", 1)[0] in (
+                    METADATA_DIRECTORY,
+                    REPORTS_DIRECTORY,
+                    ATTACHMENTS_DIRECTORY,
+                ):
+                    raise ReportPackageException(
+                        f"taxonomy file {path!r} would sit in a report package folder"
+                    )
+                if path in files:
+                    raise ReportPackageException(f"two taxonomy packages hold {path!r}")
+                files[path] = zf.read(name)
+    if metadata is None:
+        return files, None, None
+    ET.register_namespace("", CATALOG_NS)
+    catalog = ET.Element(f"{{{CATALOG_NS}}}catalog")
+    for start, prefix in sorted(rewrites.items()):
+        ET.SubElement(
+            catalog,
+            f"{{{CATALOG_NS}}}rewriteURI",
+            uriStartString=start,
+            rewritePrefix=prefix,
+        )
+    ET.register_namespace("tp", TAXONOMY_PACKAGE_NS)
+    if len(packages) == 1:
+        with zipfile.ZipFile(BytesIO(packages[0])) as zf:
+            (name,) = [
+                n
+                for n in zf.namelist()
+                if n.endswith(f"/{METADATA_DIRECTORY}/taxonomyPackage.xml")
+            ]
+            metadataBytes = zf.read(name)
+    else:
+        metadataBytes = ET.tostring(metadata, encoding="utf-8", xml_declaration=True)
+    return (
+        files,
+        ET.tostring(catalog, encoding="utf-8", xml_declaration=True),
+        metadataBytes,
+    )
 
 
 def _resourcePath(path: str) -> str:
@@ -128,6 +225,7 @@ def buildReportPackage(
     resources: Sequence[tuple[str, bytes]] = (),
     inline: bool = False,
     timestamp: datetime | None = None,
+    taxonomyPackages: Sequence[bytes] = (),
 ) -> FilelikeAndFileName:
     """Build a report package containing @report: unconstrained (``.zip``), or with
     @inline an Inline XBRL report package (``.xbri``).
@@ -145,6 +243,8 @@ def buildReportPackage(
         extension, and only Inline XBRL documents in it.
     :param timestamp: every entry's time; else SOURCE_DATE_EPOCH, else mireport's
         epoch (:data:`mireport.filesupport.DEFAULT_EPOCH`).
+    :param taxonomyPackages: the reporter's own extension taxonomy, as taxonomy
+        package zips: carried in the package, which becomes a taxonomy package too.
     """
     top = zipSafeString(topLevel, fallback="report")
     stamp = (timestamp or sourceDateEpoch()).timetuple()[:6]
@@ -157,6 +257,7 @@ def buildReportPackage(
     paths = [_resourcePath(path) for path, _ in resources]
     if len(set(paths)) != len(paths):
         raise ReportPackageException("two resources have the same path")
+    taxonomyFiles, catalog, metadata = _taxonomyContent(taxonomyPackages)
     content = BytesIO()
     with zipfile.ZipFile(
         content, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
@@ -172,6 +273,11 @@ def buildReportPackage(
             f"{top}/{METADATA_DIRECTORY}/reportPackage.json",
             INLINE_REPORT_PACKAGE_JSON if inline else UNCONSTRAINED_REPORT_PACKAGE_JSON,
         )
+        if catalog is not None and metadata is not None:
+            write(f"{top}/{METADATA_DIRECTORY}/catalog.xml", catalog)
+            write(f"{top}/{METADATA_DIRECTORY}/taxonomyPackage.xml", metadata)
+            for path in sorted(taxonomyFiles):
+                write(f"{top}/{path}", taxonomyFiles[path])
 
         reportFilename = _safeFilename(report.filename, fallback="report.html")
         if docsetMembers or resources:

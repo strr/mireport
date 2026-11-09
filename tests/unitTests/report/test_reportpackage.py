@@ -428,3 +428,83 @@ class TestTimestamp:
             ).fileContent
 
         assert build() == build()
+
+
+def taxonomyPackage(name: str, start: str, files: dict[str, bytes]) -> bytes:
+    """A small taxonomy package zip: one rewrite, one entry point, @files."""
+    content = BytesIO()
+    with zipfile.ZipFile(content, "w") as zf:
+        zf.writestr(
+            f"{name}/META-INF/catalog.xml",
+            '<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">'
+            f'<rewriteURI uriStartString="https://example.com/{start}/" rewritePrefix="../example.com/{start}/"/>'
+            "</catalog>",
+        )
+        zf.writestr(
+            f"{name}/META-INF/taxonomyPackage.xml",
+            '<tp:taxonomyPackage xmlns:tp="http://xbrl.org/2016/taxonomy-package">'
+            f"<tp:identifier>https://example.com/{start}</tp:identifier>"
+            f'<tp:entryPoints><tp:entryPoint><tp:entryPointDocument href="https://example.com/{start}/e.xsd"/>'
+            "</tp:entryPoint></tp:entryPoints></tp:taxonomyPackage>",
+        )
+        for path, data in files.items():
+            zf.writestr(f"{name}/{path}", data)
+    return content.getvalue()
+
+
+class TestExtensionTaxonomy:
+    """A reporter's own extension travels in its report package, which is then a taxonomy package too."""
+
+    EXT = taxonomyPackage("acme-ext", "acme", {"example.com/acme/e.xsd": b"<schema/>"})
+
+    def test_layout(self) -> None:
+        package = buildReportPackage(
+            REPORT, topLevel=TOP, inline=True, taxonomyPackages=[self.EXT]
+        )
+        assert namelist(package) == [
+            f"{TOP}/META-INF/reportPackage.json",
+            f"{TOP}/META-INF/catalog.xml",
+            f"{TOP}/META-INF/taxonomyPackage.xml",
+            f"{TOP}/example.com/acme/e.xsd",
+            f"{TOP}/reports/Acme_2024_XBRL_Report.html",
+        ]
+        assert b'uriStartString="https://example.com/acme/"' in readEntry(
+            package, f"{TOP}/META-INF/catalog.xml"
+        )
+
+    def test_two_packages_merge(self) -> None:
+        other = taxonomyPackage(
+            "beta", "beta", {"example.com/beta/b.xsd": b"<schema/>"}
+        )
+        package = buildReportPackage(
+            REPORT, topLevel=TOP, taxonomyPackages=[self.EXT, other]
+        )
+        catalog = readEntry(package, f"{TOP}/META-INF/catalog.xml")
+        assert (
+            b"https://example.com/acme/" in catalog
+            and b"https://example.com/beta/" in catalog
+        )
+        metadata = readEntry(package, f"{TOP}/META-INF/taxonomyPackage.xml")
+        assert metadata.count(b"entryPointDocument") == 2
+
+    def test_a_clash_is_refused(self) -> None:
+        same = taxonomyPackage(
+            "again", "other", {"example.com/acme/e.xsd": b"<different/>"}
+        )
+        with pytest.raises(ReportPackageException):
+            buildReportPackage(REPORT, topLevel=TOP, taxonomyPackages=[self.EXT, same])
+
+    def test_a_package_without_metadata_is_refused(self) -> None:
+        bare = BytesIO()
+        with zipfile.ZipFile(bare, "w") as zf:
+            zf.writestr("x/example.com/x.xsd", b"<schema/>")
+        with pytest.raises(ReportPackageException):
+            buildReportPackage(REPORT, topLevel=TOP, taxonomyPackages=[bare.getvalue()])
+
+    def test_two_builds_are_the_same_bytes(self) -> None:
+        def build() -> bytes:
+            return buildReportPackage(
+                REPORT, topLevel=TOP, inline=True, taxonomyPackages=[self.EXT]
+            ).fileContent
+
+        assert build() == build()
